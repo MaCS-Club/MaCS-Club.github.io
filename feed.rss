@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"
+    xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <channel>
+        <title>MaCS-Club feed</title>
+        <link>https://macs-club.github.io</link>
+        <description><![CDATA[This feed provides fresh posts, news and articles!]]></description>
+        <atom:link href="https://macs-club.github.io/feed.rss" rel="self"
+                   type="application/rss+xml" />
+        <lastBuildDate>Fri, 01 May 2020 00:00:00 UT</lastBuildDate>
+        <item>
+    <title>Типы и Логика</title>
+    <link>https://macs-club.github.io/posts/2020-05-01-types-and-logic.html</link>
+    <description><![CDATA[В этой лекции я расскажу про теоретическое обоснование доказательств с использованием типов в языках программирования и покажу связь между системами типизации и конструктивной(интуиционистской) логикой.]]></description>
+    <pubDate>Fri, 01 May 2020 00:00:00 UT</pubDate>
+    <guid>https://macs-club.github.io/posts/2020-05-01-types-and-logic.html</guid>
+    <dc:creator>MaCS-Club</dc:creator>
+</item>
+<item>
+    <title>Введение в Agda</title>
+    <link>https://macs-club.github.io/posts/2020-04-27-agda-introduction.html</link>
+    <description><![CDATA[Первая лекция из курса по Agda в которой я расскажу, что же это за язык такой, зачем он нужен и покажу несколько примеров.]]></description>
+    <pubDate>Mon, 27 Apr 2020 00:00:00 UT</pubDate>
+    <guid>https://macs-club.github.io/posts/2020-04-27-agda-introduction.html</guid>
+    <dc:creator>MaCS-Club</dc:creator>
+</item>
+<item>
+    <title>Создание простого REST сервера на http4s и doobie</title>
+    <link>https://macs-club.github.io/posts/2017-09-09-http4s-rest-api-tutorial.html</link>
+    <description><![CDATA[В этой статье я расскажу о базовых принципах работы с библиотекой http4s и о том как с помощью неё создать простой REST сервер.]]></description>
+    <pubDate>Sat, 09 Sep 2017 00:00:00 UT</pubDate>
+    <guid>https://macs-club.github.io/posts/2017-09-09-http4s-rest-api-tutorial.html</guid>
+    <dc:creator>MaCS-Club</dc:creator>
+</item>
+<item>
+    <title>Scalaz для ежедневного использования. Часть 3. Монада State, монада Writer и линзы.</title>
+    <link>https://macs-club.github.io/posts/2016-06-22-scalaz-features-for-everyday-usage-part-3.html</link>
+    <description><![CDATA[В этой статье мы посмотрим на пару монад и паттернов из Scalaz. Напомню, что мы будем смотреть на них с практической точки зрения и избегать внутренних деталей Scalaz. В данной статье мы рассмотрим монада Writer(ведёт своего рода логи во время выполнения набора операций), монада State(предоставляет простой способ пробрасывания состояния между функциями), линзы(предоставляет простой доступ к глубоко вложенным атрибутам и делает создание копий иерархии case class'ов более удобным).]]></description>
+    <pubDate>Wed, 22 Jun 2016 00:00:00 UT</pubDate>
+    <guid>https://macs-club.github.io/posts/2016-06-22-scalaz-features-for-everyday-usage-part-3.html</guid>
+    <dc:creator>MaCS-Club</dc:creator>
+</item>
+<item>
+    <title>Scalaz для ежедневного использования. Часть 2. Монадные трансформеры и монада Reader.</title>
+    <link>https://macs-club.github.io/posts/2016-06-17-scalaz-features-for-everyday-usage-part-2.html</link>
+    <description><![CDATA[Во второй статье "Scalaz для ежедневного использования" мы рассмотрим монадные трансформеры и монаду Reader. Начнём с монадных трансформеров. Они пригодятся когда вам нужно иметь дело с вложенными монадами, что происходит удивительно часто. Например, когда вам нужно работать с вложенными Future[Option] или Future[Either], ваши for-генераторы довольно быстро могут стать не читаемыми, так как вам нужно обрабатывать None и Some для Option, а так же Success и Failure для Future явно.]]></description>
+    <pubDate>Fri, 17 Jun 2016 00:00:00 UT</pubDate>
+    <guid>https://macs-club.github.io/posts/2016-06-17-scalaz-features-for-everyday-usage-part-2.html</guid>
+    <dc:creator>MaCS-Club</dc:creator>
+</item>
+<item>
+    <title>Scalaz для ежедневного использования. Часть 1. Классы типов и расширения Scala.</title>
+    <link>https://macs-club.github.io/posts/2016-06-04-scalaz-features-for-everyday-usage-part-1.html</link>
+    <description><![CDATA[Многие из вас наверно слышали о замечательной JavaScript книге "JavaScript the good parts". В подобном ключе я бы хотел рассказать о некоторых вещах из Scalaz, которые действительно здорово использовать в повседневных проектах без необходимости вникать в то что происходит внутри Scalaz. В первой части мы рассмотрим несколько полезных классов типов. В будущих частях мы рассмотрим такие вещи как монадные трансформеры, свободные монады, Validation и т.д.]]></description>
+    <pubDate>Sat, 04 Jun 2016 00:00:00 UT</pubDate>
+    <guid>https://macs-club.github.io/posts/2016-06-04-scalaz-features-for-everyday-usage-part-1.html</guid>
+    <dc:creator>MaCS-Club</dc:creator>
+</item>
+<item>
+    <title>Hello, World! на Scala под Android</title>
+    <link>https://macs-club.github.io/posts/2016-03-09-helloworld-on-android-with-scala.html</link>
+    <description><![CDATA[В данной статье я постараюсь рассказать о том как начать разрабатывать приложения под Android используя Scala и SBT. Предполагается что у вас уже установлены Android SDK и SBT.]]></description>
+    <pubDate>Wed, 09 Mar 2016 00:00:00 UT</pubDate>
+    <guid>https://macs-club.github.io/posts/2016-03-09-helloworld-on-android-with-scala.html</guid>
+    <dc:creator>MaCS-Club</dc:creator>
+</item>
+
+    </channel>
+</rss>

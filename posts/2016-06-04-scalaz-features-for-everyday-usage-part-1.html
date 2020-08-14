@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>MaCS-Club Blog - Scalaz для ежедневного использования. Часть 1. Классы типов и расширения Scala.</title>
+        <link rel="stylesheet" href="../css/default.css" />
+        <link rel="stylesheet" href="../css/syntax.css" />
+    </head>
+    <body>
+        <div id="header">
+            <div id="logo">
+                <a href="../">MaCS-Club</a>
+            </div>
+            <div id="navigation">
+                <a href="../">Главная</a>
+                <a href="../about.html">О нас</a>
+                <a href="../contact.html">Контакты</a>
+                <a href="../archive.html">Архив</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <h1>Scalaz для ежедневного использования. Часть 1. Классы типов и расширения Scala.</h1>
+            <div class="info">
+    Дата: June  4, 2016
+    
+        Автор: jos.dirksen (перевод BeiZero)
+    
+</div>
+<div class="info">
+    
+    Tags: <a href="../tags/scala.html">scala</a>, <a href="../tags/scalaz%20%D0%B4%D0%BB%D1%8F%20%D0%B5%D0%B6%D0%B5%D0%B4%D0%BD%D0%B5%D0%B2%D0%BD%D0%BE%D0%B3%D0%BE%20%D0%B8%D1%81%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%8F.html">scalaz для ежедневного использования</a>, <a href="../tags/scalaz.html">scalaz</a>, <a href="../tags/%D0%BF%D0%B5%D1%80%D0%B5%D0%B2%D0%BE%D0%B4.html">перевод</a>
+    
+</div>
+
+<p>Многие из вас наверно слышали о замечательной JavaScript книге “JavaScript the good parts”. В подобном ключе я бы хотел рассказать о некоторых вещах из Scalaz, которые действительно здорово использовать в повседневных проектах без необходимости вникать в то что происходит внутри Scalaz. В первой части мы рассмотрим несколько полезных классов типов. В будущих частях мы рассмотрим такие вещи как монадные трансформеры, свободные монады, Validation и т.д.</p>
+<!--more-->
+<p>В наших примерах мы будем использовать Scala REPL. Для этого запустим <code>scala</code>, добавим библиотеку scalaz и импортируем нужные нам пакеты:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb1-1"><a href="#cb1-1"></a>scala&gt; :require /Users/jos/.<span class="fu">ivy2</span>/cache/org.<span class="fu">scalaz</span>/scalaz-core_<span class="fl">2.11</span>/bundles/scalaz-core_<span class="fl">2.11</span><span class="dv">-7</span>.<span class="dv">2</span>.<span class="fl">1.</span>jar</span>
+<span id="cb1-2"><a href="#cb1-2"></a>Added '/Users/jos/.<span class="fu">ivy2</span>/cache/org.<span class="fu">scalaz</span>/scalaz-core_<span class="fl">2.11</span>/bundles/scalaz-core_<span class="fl">2.11</span><span class="dv">-7</span>.<span class="dv">2</span>.<span class="fl">1.</span>jar' to classpath.</span>
+<span id="cb1-3"><a href="#cb1-3"></a></span>
+<span id="cb1-4"><a href="#cb1-4"></a>scala&gt; <span class="kw">import</span> scalaz._</span>
+<span id="cb1-5"><a href="#cb1-5"></a><span class="kw">import</span> scalaz._</span>
+<span id="cb1-6"><a href="#cb1-6"></a></span>
+<span id="cb1-7"><a href="#cb1-7"></a>scala&gt; <span class="kw">import</span> Scalaz._</span>
+<span id="cb1-8"><a href="#cb1-8"></a><span class="kw">import</span> Scalaz._</span></code></pre></div>
+<p>В данной статье мы рассмотрим следующие классы типов из библиотеки Scalaz:</p>
+<ol type="1">
+<li>Equals: для типобезопасной операции сравнения на равенство.</li>
+<li>Order: для немного более типобезопасного отношения порядка.</li>
+<li>Enum: для создания богатых типов перечеслений.</li>
+</ol>
+<p>Кроме того, мы также рассмотрим несколько простых расширений, которые добавляет Scalaz, для некоторых типов из стандартной библиотеки. Мы не будем рассматривать всё что добавляет Scalaz и остановимся на паре расширений для Option и Boolean.</p>
+<h3 id="полезные-классы-типов">Полезные классы типов</h3>
+<p>С помощью классов типов можно легко добавить функциональность к существующим классам. Scalaz уже содержит в себе несколько полезных классов типов, которые вы можете сразу же использовать.</p>
+<h4 id="типобезопасный-оператор-сравнения">Типобезопасный оператор сравнения</h4>
+<p>В Scalaz есть типобезопасный оператор сравнения на равенство, который выдаёт ошибку компиляции если мы пытаемся сравнить объекты разных типов. Таким образом, в то время как <code>==</code> и <code>!=</code> из стандартной библиотеки позволят вам сравнивать, например, объекты классов String и Int, использование операторов <code>===</code> и <code>=/=</code> из Scalaz приведет к ошибке компиляции:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb2-1"><a href="#cb2-1"></a>scala&gt; <span class="dv">1</span> == <span class="dv">1</span></span>
+<span id="cb2-2"><a href="#cb2-2"></a>res6: Boolean = <span class="kw">true</span></span>
+<span id="cb2-3"><a href="#cb2-3"></a>scala&gt; <span class="dv">1</span> === <span class="dv">1</span></span>
+<span id="cb2-4"><a href="#cb2-4"></a>res7: Boolean = <span class="kw">true</span></span>
+<span id="cb2-5"><a href="#cb2-5"></a>scala&gt; <span class="dv">1</span> == <span class="st">&quot;1&quot;</span></span>
+<span id="cb2-6"><a href="#cb2-6"></a>res8: Boolean = <span class="kw">false</span></span>
+<span id="cb2-7"><a href="#cb2-7"></a>scala&gt; <span class="dv">1</span> === <span class="st">&quot;1&quot;</span></span>
+<span id="cb2-8"><a href="#cb2-8"></a>&lt;console&gt;:<span class="dv">14</span>: error: <span class="kw">type</span> mismatch;</span>
+<span id="cb2-9"><a href="#cb2-9"></a> found   : String(<span class="st">&quot;1&quot;</span>)</span>
+<span id="cb2-10"><a href="#cb2-10"></a> required: Int</span>
+<span id="cb2-11"><a href="#cb2-11"></a>              <span class="dv">1</span> === <span class="st">&quot;1&quot;</span></span></code></pre></div>
+<p>Scalaz предоставляет следующий набор операторов поведение которых легко понять из реализации:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb3-1"><a href="#cb3-1"></a><span class="kw">final</span> <span class="kw">def</span> ===(other: F): Boolean = F.<span class="fu">equal</span>(self, other)</span>
+<span id="cb3-2"><a href="#cb3-2"></a><span class="kw">final</span> <span class="kw">def</span> /==(other: F): Boolean = !F.<span class="fu">equal</span>(self, other)</span>
+<span id="cb3-3"><a href="#cb3-3"></a><span class="kw">final</span> <span class="kw">def</span> =/=(other: F): Boolean = /==(other)</span>
+<span id="cb3-4"><a href="#cb3-4"></a><span class="kw">final</span> <span class="kw">def</span> ≟(other: F): Boolean = F.<span class="fu">equal</span>(self, other)</span>
+<span id="cb3-5"><a href="#cb3-5"></a><span class="kw">final</span> <span class="kw">def</span> ≠(other: F): Boolean = !F.<span class="fu">equal</span>(self, other)</span></code></pre></div>
+<h4 id="класс-типов-order">Класс типов Order</h4>
+<p>Этот очень простой класс типов позволяет более типобезопасно пользоваться отношением порядка. Так же, как и с операторами из Equals теперь мы можем поймать сравнение двух объектов разных типов во время компиляции:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb4-1"><a href="#cb4-1"></a>scala&gt; <span class="dv">1</span> &lt; 4d</span>
+<span id="cb4-2"><a href="#cb4-2"></a>res25: Boolean = <span class="kw">true</span></span>
+<span id="cb4-3"><a href="#cb4-3"></a></span>
+<span id="cb4-4"><a href="#cb4-4"></a>scala&gt; <span class="dv">1</span> lte 4d</span>
+<span id="cb4-5"><a href="#cb4-5"></a>&lt;console&gt;:<span class="dv">14</span>: error: <span class="kw">type</span> mismatch;</span>
+<span id="cb4-6"><a href="#cb4-6"></a> found   : Double(<span class="fl">4.0</span>)</span>
+<span id="cb4-7"><a href="#cb4-7"></a> required: Int</span>
+<span id="cb4-8"><a href="#cb4-8"></a>              <span class="dv">1</span> lte 4d</span>
+<span id="cb4-9"><a href="#cb4-9"></a></span>
+<span id="cb4-10"><a href="#cb4-10"></a>scala&gt; <span class="dv">1</span> ?|? <span class="dv">1</span></span>
+<span id="cb4-11"><a href="#cb4-11"></a>res31: scalaz.<span class="fu">Ordering</span> = EQ</span>
+<span id="cb4-12"><a href="#cb4-12"></a></span>
+<span id="cb4-13"><a href="#cb4-13"></a>scala&gt; <span class="dv">1</span> ?|? <span class="dv">2</span></span>
+<span id="cb4-14"><a href="#cb4-14"></a>res32: scalaz.<span class="fu">Ordering</span> = LT</span>
+<span id="cb4-15"><a href="#cb4-15"></a></span>
+<span id="cb4-16"><a href="#cb4-16"></a>scala&gt; <span class="dv">1</span> ?|? 2d</span>
+<span id="cb4-17"><a href="#cb4-17"></a>&lt;console&gt;:<span class="dv">14</span>: error: <span class="kw">type</span> mismatch;</span>
+<span id="cb4-18"><a href="#cb4-18"></a> found   : Double(<span class="fl">2.0</span>)</span>
+<span id="cb4-19"><a href="#cb4-19"></a> required: Int</span>
+<span id="cb4-20"><a href="#cb4-20"></a>              <span class="dv">1</span> ?|? 2d</span></code></pre></div>
+<p>Scalaz предоставляет для этого следующие операторы:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb5-1"><a href="#cb5-1"></a><span class="kw">final</span> <span class="kw">def</span> &lt;(other: F): Boolean = F.<span class="fu">lessThan</span>(self, other)</span>
+<span id="cb5-2"><a href="#cb5-2"></a><span class="kw">final</span> <span class="kw">def</span> &lt;=(other: F): Boolean = F.<span class="fu">lessThanOrEqual</span>(self, other)</span>
+<span id="cb5-3"><a href="#cb5-3"></a><span class="kw">final</span> <span class="kw">def</span> &gt;(other: F): Boolean = F.<span class="fu">greaterThan</span>(self, other)</span>
+<span id="cb5-4"><a href="#cb5-4"></a><span class="kw">final</span> <span class="kw">def</span> &gt;=(other: F): Boolean = F.<span class="fu">greaterThanOrEqual</span>(self, other)</span>
+<span id="cb5-5"><a href="#cb5-5"></a><span class="kw">final</span> <span class="kw">def</span> <span class="fu">max</span>(other: F): F = F.<span class="fu">max</span>(self, other)</span>
+<span id="cb5-6"><a href="#cb5-6"></a><span class="kw">final</span> <span class="kw">def</span> <span class="fu">min</span>(other: F): F = F.<span class="fu">min</span>(self, other)</span>
+<span id="cb5-7"><a href="#cb5-7"></a><span class="kw">final</span> <span class="kw">def</span> <span class="fu">cmp</span>(other: F): Ordering = F.<span class="fu">order</span>(self, other)</span>
+<span id="cb5-8"><a href="#cb5-8"></a><span class="kw">final</span> <span class="kw">def</span> ?|?(other: F): Ordering = F.<span class="fu">order</span>(self, other)</span>
+<span id="cb5-9"><a href="#cb5-9"></a><span class="kw">final</span> <span class="kw">def</span> <span class="fu">lte</span>(other: F): Boolean = F.<span class="fu">lessThanOrEqual</span>(self, other)</span>
+<span id="cb5-10"><a href="#cb5-10"></a><span class="kw">final</span> <span class="kw">def</span> <span class="fu">gte</span>(other: F): Boolean = F.<span class="fu">greaterThanOrEqual</span>(self, other)</span>
+<span id="cb5-11"><a href="#cb5-11"></a><span class="kw">final</span> <span class="kw">def</span> <span class="fu">lt</span>(other: F): Boolean = F.<span class="fu">lessThan</span>(self, other)</span>
+<span id="cb5-12"><a href="#cb5-12"></a><span class="kw">final</span> <span class="kw">def</span> <span class="fu">gt</span>(other: F): Boolean = F.<span class="fu">greaterThan</span>(self, other)</span></code></pre></div>
+<h4 id="класс-типов-enum">Класс типов Enum</h4>
+<p>С Enum из Scalaz очень легко создавать типы перечисления, которые имеют больше функциональных возможностей, чем те, что находятся в стандартных библиотеках Scala и Java. Scalaz предоставляет для этого следующие функции:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb6-1"><a href="#cb6-1"></a><span class="kw">final</span> <span class="kw">def</span> succ: F = F succ self</span>
+<span id="cb6-2"><a href="#cb6-2"></a><span class="kw">final</span> <span class="kw">def</span> -+-(n: Int): F = F.<span class="fu">succn</span>(n, self)</span>
+<span id="cb6-3"><a href="#cb6-3"></a><span class="kw">final</span> <span class="kw">def</span> succx: Option[F] = F.<span class="fu">succx</span>.<span class="fu">apply</span>(self)</span>
+<span id="cb6-4"><a href="#cb6-4"></a><span class="kw">final</span> <span class="kw">def</span> pred: F = F pred self</span>
+<span id="cb6-5"><a href="#cb6-5"></a><span class="kw">final</span> <span class="kw">def</span> ---(n: Int): F = F.<span class="fu">predn</span>(n, self)</span>
+<span id="cb6-6"><a href="#cb6-6"></a><span class="kw">final</span> <span class="kw">def</span> predx: Option[F] = F.<span class="fu">predx</span>.<span class="fu">apply</span>(self)</span>
+<span id="cb6-7"><a href="#cb6-7"></a><span class="kw">final</span> <span class="kw">def</span> from: EphemeralStream[F] = F.<span class="fu">from</span>(self)</span>
+<span id="cb6-8"><a href="#cb6-8"></a><span class="kw">final</span> <span class="kw">def</span> <span class="fu">fromStep</span>(step: Int): EphemeralStream[F] = F.<span class="fu">fromStep</span>(step, self)</span>
+<span id="cb6-9"><a href="#cb6-9"></a><span class="kw">final</span> <span class="kw">def</span> |=&gt;(to: F): EphemeralStream[F] = F.<span class="fu">fromTo</span>(self, to)</span>
+<span id="cb6-10"><a href="#cb6-10"></a><span class="kw">final</span> <span class="kw">def</span> |-&gt;(to: F): List[F] = F.<span class="fu">fromToL</span>(self, to)</span>
+<span id="cb6-11"><a href="#cb6-11"></a><span class="kw">final</span> <span class="kw">def</span> |==&gt;(step: Int, to: F): EphemeralStream[F] = F.<span class="fu">fromStepTo</span>(step, self, to)</span>
+<span id="cb6-12"><a href="#cb6-12"></a><span class="kw">final</span> <span class="kw">def</span> |--&gt;(step: Int, to: F): List[F] = F.<span class="fu">fromStepToL</span>(step, self, to)</span></code></pre></div>
+<p>Очень хороший пример можно найти на <a href="http://stackoverflow.com/questions/28589022/enumeration-concept-in-scala-which-option-to-take">StackOverflow</a>, который всё же требует нескольких изменений для того чтобы получить все вкусности Scala. Следующий код показывает как использовать данное перечесление:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb7-1"><a href="#cb7-1"></a>scala&gt; <span class="kw">import</span> scalaz.<span class="fu">Ordering</span>._</span>
+<span id="cb7-2"><a href="#cb7-2"></a><span class="kw">import</span> scalaz.<span class="fu">Ordering</span>._</span>
+<span id="cb7-3"><a href="#cb7-3"></a></span>
+<span id="cb7-4"><a href="#cb7-4"></a>scala&gt; :paste</span>
+<span id="cb7-5"><a href="#cb7-5"></a><span class="co">// Entering paste mode (ctrl-D to finish)</span></span>
+<span id="cb7-6"><a href="#cb7-6"></a></span>
+<span id="cb7-7"><a href="#cb7-7"></a>  <span class="kw">case</span> <span class="kw">class</span> <span class="fu">Coloring</span>(<span class="kw">val</span> toInt: Int, <span class="kw">val</span> name: String)</span>
+<span id="cb7-8"><a href="#cb7-8"></a></span>
+<span id="cb7-9"><a href="#cb7-9"></a>  <span class="kw">object</span> Coloring <span class="kw">extends</span> ColoringInstances {</span>
+<span id="cb7-10"><a href="#cb7-10"></a></span>
+<span id="cb7-11"><a href="#cb7-11"></a>    <span class="kw">val</span> RED = <span class="fu">Coloring</span>(<span class="dv">1</span>, <span class="st">&quot;RED&quot;</span>)</span>
+<span id="cb7-12"><a href="#cb7-12"></a>    <span class="kw">val</span> BLUE = <span class="fu">Coloring</span>(<span class="dv">1</span>, <span class="st">&quot;BLUE&quot;</span>)</span>
+<span id="cb7-13"><a href="#cb7-13"></a>    <span class="kw">val</span> GREEN = <span class="fu">Coloring</span>(<span class="dv">1</span>, <span class="st">&quot;GREEN&quot;</span>)</span>
+<span id="cb7-14"><a href="#cb7-14"></a>  }</span>
+<span id="cb7-15"><a href="#cb7-15"></a></span>
+<span id="cb7-16"><a href="#cb7-16"></a>  <span class="kw">sealed</span> <span class="kw">abstract</span> <span class="kw">class</span> ColoringInstances {</span>
+<span id="cb7-17"><a href="#cb7-17"></a></span>
+<span id="cb7-18"><a href="#cb7-18"></a>    <span class="kw">import</span> Coloring._</span>
+<span id="cb7-19"><a href="#cb7-19"></a></span>
+<span id="cb7-20"><a href="#cb7-20"></a>    <span class="kw">implicit</span> <span class="kw">val</span> coloringInstance: Enum[Coloring] <span class="kw">with</span> Show[Coloring] = <span class="kw">new</span> Enum[Coloring] <span class="kw">with</span> Show[Coloring] {</span>
+<span id="cb7-21"><a href="#cb7-21"></a></span>
+<span id="cb7-22"><a href="#cb7-22"></a>      <span class="kw">def</span> <span class="fu">order</span>(a1: Coloring, a2: Coloring): Ordering = (a1, a2) <span class="kw">match</span> {</span>
+<span id="cb7-23"><a href="#cb7-23"></a>        <span class="kw">case</span> (RED, RED) =&gt; EQ</span>
+<span id="cb7-24"><a href="#cb7-24"></a>        <span class="kw">case</span> (RED, BLUE | GREEN) =&gt; LT</span>
+<span id="cb7-25"><a href="#cb7-25"></a>        <span class="kw">case</span> (BLUE, BLUE) =&gt; EQ</span>
+<span id="cb7-26"><a href="#cb7-26"></a>        <span class="kw">case</span> (BLUE, GREEN) =&gt; LT</span>
+<span id="cb7-27"><a href="#cb7-27"></a>        <span class="kw">case</span> (BLUE, RED) =&gt; GT</span>
+<span id="cb7-28"><a href="#cb7-28"></a>        <span class="kw">case</span> (GREEN, RED) =&gt; GT</span>
+<span id="cb7-29"><a href="#cb7-29"></a>        <span class="kw">case</span> (GREEN, BLUE) =&gt; GT</span>
+<span id="cb7-30"><a href="#cb7-30"></a>        <span class="kw">case</span> (GREEN, GREEN) =&gt; EQ</span>
+<span id="cb7-31"><a href="#cb7-31"></a>      }</span>
+<span id="cb7-32"><a href="#cb7-32"></a></span>
+<span id="cb7-33"><a href="#cb7-33"></a>      <span class="kw">def</span> <span class="fu">append</span>(c1: Coloring, c2: =&gt; Coloring): Coloring = c1 <span class="kw">match</span> {</span>
+<span id="cb7-34"><a href="#cb7-34"></a>        <span class="kw">case</span> Coloring.<span class="fu">RED</span> =&gt; c2</span>
+<span id="cb7-35"><a href="#cb7-35"></a>        <span class="kw">case</span> o =&gt; o</span>
+<span id="cb7-36"><a href="#cb7-36"></a>      }</span>
+<span id="cb7-37"><a href="#cb7-37"></a></span>
+<span id="cb7-38"><a href="#cb7-38"></a>      <span class="kw">override</span> <span class="kw">def</span> <span class="fu">shows</span>(c: Coloring) = c.<span class="fu">name</span></span>
+<span id="cb7-39"><a href="#cb7-39"></a></span>
+<span id="cb7-40"><a href="#cb7-40"></a>      <span class="kw">def</span> zero: Coloring = Coloring.<span class="fu">RED</span></span>
+<span id="cb7-41"><a href="#cb7-41"></a></span>
+<span id="cb7-42"><a href="#cb7-42"></a>      <span class="kw">def</span> <span class="fu">succ</span>(c: Coloring) = c <span class="kw">match</span> {</span>
+<span id="cb7-43"><a href="#cb7-43"></a>        <span class="kw">case</span> Coloring.<span class="fu">RED</span> =&gt; Coloring.<span class="fu">BLUE</span></span>
+<span id="cb7-44"><a href="#cb7-44"></a>        <span class="kw">case</span> Coloring.<span class="fu">BLUE</span> =&gt; Coloring.<span class="fu">GREEN</span></span>
+<span id="cb7-45"><a href="#cb7-45"></a>        <span class="kw">case</span> Coloring.<span class="fu">GREEN</span> =&gt; Coloring.<span class="fu">RED</span></span>
+<span id="cb7-46"><a href="#cb7-46"></a>      }</span>
+<span id="cb7-47"><a href="#cb7-47"></a></span>
+<span id="cb7-48"><a href="#cb7-48"></a>      <span class="kw">def</span> <span class="fu">pred</span>(c: Coloring) = c <span class="kw">match</span> {</span>
+<span id="cb7-49"><a href="#cb7-49"></a>        <span class="kw">case</span> Coloring.<span class="fu">GREEN</span> =&gt; Coloring.<span class="fu">BLUE</span></span>
+<span id="cb7-50"><a href="#cb7-50"></a>        <span class="kw">case</span> Coloring.<span class="fu">BLUE</span> =&gt; Coloring.<span class="fu">RED</span></span>
+<span id="cb7-51"><a href="#cb7-51"></a>        <span class="kw">case</span> Coloring.<span class="fu">RED</span> =&gt; Coloring.<span class="fu">GREEN</span></span>
+<span id="cb7-52"><a href="#cb7-52"></a>      }</span>
+<span id="cb7-53"><a href="#cb7-53"></a></span>
+<span id="cb7-54"><a href="#cb7-54"></a>      <span class="kw">override</span> <span class="kw">def</span> max = Some(GREEN)</span>
+<span id="cb7-55"><a href="#cb7-55"></a></span>
+<span id="cb7-56"><a href="#cb7-56"></a>      <span class="kw">override</span> <span class="kw">def</span> min = Some(RED)</span>
+<span id="cb7-57"><a href="#cb7-57"></a></span>
+<span id="cb7-58"><a href="#cb7-58"></a>    }</span>
+<span id="cb7-59"><a href="#cb7-59"></a>  }</span>
+<span id="cb7-60"><a href="#cb7-60"></a></span>
+<span id="cb7-61"><a href="#cb7-61"></a><span class="co">// Exiting paste mode, now interpreting.</span></span>
+<span id="cb7-62"><a href="#cb7-62"></a></span>
+<span id="cb7-63"><a href="#cb7-63"></a>defined <span class="kw">class</span> Coloring</span>
+<span id="cb7-64"><a href="#cb7-64"></a>defined <span class="kw">object</span> Coloring</span>
+<span id="cb7-65"><a href="#cb7-65"></a>defined <span class="kw">class</span> ColoringInstances</span></code></pre></div>
+<p>Теперь мы можем использовать все функции определённые в Scalaz Enum:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb8-1"><a href="#cb8-1"></a>scala&gt; <span class="kw">import</span> Coloring._</span>
+<span id="cb8-2"><a href="#cb8-2"></a><span class="kw">import</span> Coloring._</span>
+<span id="cb8-3"><a href="#cb8-3"></a></span>
+<span id="cb8-4"><a href="#cb8-4"></a>scala&gt; RED</span>
+<span id="cb8-5"><a href="#cb8-5"></a>res0: Coloring = <span class="fu">Coloring</span>(<span class="dv">1</span>,RED)</span>
+<span id="cb8-6"><a href="#cb8-6"></a></span>
+<span id="cb8-7"><a href="#cb8-7"></a>scala&gt; GREEN</span>
+<span id="cb8-8"><a href="#cb8-8"></a>res1: Coloring = <span class="fu">Coloring</span>(<span class="dv">1</span>,GREEN)</span>
+<span id="cb8-9"><a href="#cb8-9"></a></span>
+<span id="cb8-10"><a href="#cb8-10"></a>scala&gt; RED |-&gt; GREEN</span>
+<span id="cb8-11"><a href="#cb8-11"></a>res2: List[Coloring] = List(<span class="fu">Coloring</span>(<span class="dv">1</span>,RED), <span class="fu">Coloring</span>(<span class="dv">1</span>,BLUE), <span class="fu">Coloring</span>(<span class="dv">1</span>,GREEN))</span>
+<span id="cb8-12"><a href="#cb8-12"></a></span>
+<span id="cb8-13"><a href="#cb8-13"></a>scala&gt; RED succ</span>
+<span id="cb8-14"><a href="#cb8-14"></a>warning: there was one feature warning; re-run <span class="kw">with</span> -feature <span class="kw">for</span> details</span>
+<span id="cb8-15"><a href="#cb8-15"></a>res3: Coloring = <span class="fu">Coloring</span>(<span class="dv">1</span>,BLUE)</span>
+<span id="cb8-16"><a href="#cb8-16"></a></span>
+<span id="cb8-17"><a href="#cb8-17"></a>scala&gt; RED -+- <span class="dv">1</span></span>
+<span id="cb8-18"><a href="#cb8-18"></a>res4: Coloring = <span class="fu">Coloring</span>(<span class="dv">1</span>,BLUE)</span>
+<span id="cb8-19"><a href="#cb8-19"></a></span>
+<span id="cb8-20"><a href="#cb8-20"></a>scala&gt; RED -+- <span class="dv">2</span></span>
+<span id="cb8-21"><a href="#cb8-21"></a>res5: Coloring = <span class="fu">Coloring</span>(<span class="dv">1</span>,GREEN)</span></code></pre></div>
+<p>Правда впечатляет? Это действительно очень хороший способ создания гибких и богатых перечислений.</p>
+<h3 id="расширения-стандартных-классов">Расширения стандартных классов</h3>
+<p>Как мы уже говорили в начале статьи, мы рассмотрим как Scalaz делает стандартную библиотеку более богатой и добавляет новую функциональность к стандартным классам.</p>
+<p>####Веселимся с Option</p>
+<p>С классом типов Optional Scalaz делает работу с Option проще. Например, он предоставляет функции для более простого конструирования:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb9-1"><a href="#cb9-1"></a>scala&gt; Some(<span class="dv">10</span>)</span>
+<span id="cb9-2"><a href="#cb9-2"></a>res11: Some[Int] = Some(<span class="dv">10</span>)</span>
+<span id="cb9-3"><a href="#cb9-3"></a></span>
+<span id="cb9-4"><a href="#cb9-4"></a>scala&gt; None</span>
+<span id="cb9-5"><a href="#cb9-5"></a>res12: None.<span class="fu">type</span> = None</span>
+<span id="cb9-6"><a href="#cb9-6"></a></span>
+<span id="cb9-7"><a href="#cb9-7"></a>scala&gt; <span class="fu">some</span>(<span class="dv">10</span>)</span>
+<span id="cb9-8"><a href="#cb9-8"></a>res13: Option[Int] = Some(<span class="dv">10</span>)</span>
+<span id="cb9-9"><a href="#cb9-9"></a></span>
+<span id="cb9-10"><a href="#cb9-10"></a>scala&gt; none[Int]</span>
+<span id="cb9-11"><a href="#cb9-11"></a>res14: Option[Int] = None</span></code></pre></div>
+<p>Мы видим что результирующим типом является Option[T] вместо Some или None. Вам может быть не понятно где это может быть полезно, но давайте рассмотрим следующую ситуацию: скажем, у нас есть список Option к которому мы хотим применить свёртку:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb10-1"><a href="#cb10-1"></a>scala&gt; <span class="kw">val</span> l = List(Some(<span class="dv">10</span>), Some(<span class="dv">20</span>), None, Some(<span class="dv">30</span>))</span>
+<span id="cb10-2"><a href="#cb10-2"></a>l: List[Option[Int]] = List(Some(<span class="dv">10</span>), Some(<span class="dv">20</span>), None, Some(<span class="dv">30</span>))</span>
+<span id="cb10-3"><a href="#cb10-3"></a></span>
+<span id="cb10-4"><a href="#cb10-4"></a>scala&gt; l.<span class="fu">foldLeft</span>(None) { (el, z) =&gt; el.<span class="fu">orElse</span>(z)  }</span>
+<span id="cb10-5"><a href="#cb10-5"></a>&lt;console&gt;:<span class="dv">22</span>: error: <span class="kw">type</span> mismatch;</span>
+<span id="cb10-6"><a href="#cb10-6"></a> found   : Option[Int]</span>
+<span id="cb10-7"><a href="#cb10-7"></a> required: None.<span class="fu">type</span></span>
+<span id="cb10-8"><a href="#cb10-8"></a>              l.<span class="fu">foldLeft</span>(None) { (el, z) =&gt; el.<span class="fu">orElse</span>(z)  }</span></code></pre></div>
+<p>Данный код упадёт с ошибкой, потому что результат свёртки должен быть None.type, а не Option. Когда мы используем функции из Scalaz это работает так как мы и ожидали:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb11-1"><a href="#cb11-1"></a>scala&gt; l.<span class="fu">foldLeft</span>(none[Int]) { (el, z) =&gt; el.<span class="fu">orElse</span>(z)  }</span>
+<span id="cb11-2"><a href="#cb11-2"></a>res19: Option[Int] = Some(<span class="dv">10</span>)</span></code></pre></div>
+<p>И конечно же Scalaz добавляет новых операторов:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb12-1"><a href="#cb12-1"></a><span class="co">// Альтернатива getOrElse</span></span>
+<span id="cb12-2"><a href="#cb12-2"></a>scala&gt; Some(<span class="dv">10</span>) | <span class="dv">20</span></span>
+<span id="cb12-3"><a href="#cb12-3"></a>res29: Int = <span class="dv">10</span></span>
+<span id="cb12-4"><a href="#cb12-4"></a></span>
+<span id="cb12-5"><a href="#cb12-5"></a>scala&gt; none | <span class="dv">10</span></span>
+<span id="cb12-6"><a href="#cb12-6"></a>res30: Int = <span class="dv">10</span></span>
+<span id="cb12-7"><a href="#cb12-7"></a></span>
+<span id="cb12-8"><a href="#cb12-8"></a><span class="co">// Тернарный оператор</span></span>
+<span id="cb12-9"><a href="#cb12-9"></a>scala&gt; Some(<span class="dv">10</span>) ? <span class="dv">5</span> | <span class="dv">4</span></span>
+<span id="cb12-10"><a href="#cb12-10"></a>res31: Int = <span class="dv">5</span></span>
+<span id="cb12-11"><a href="#cb12-11"></a></span>
+<span id="cb12-12"><a href="#cb12-12"></a><span class="co">// ~ : Возвращает элемент хранимый в Option, если он там есть, а иначе &quot;ноль&quot; типа A</span></span>
+<span id="cb12-13"><a href="#cb12-13"></a>scala&gt; <span class="fu">some</span>(List())</span>
+<span id="cb12-14"><a href="#cb12-14"></a>res32: Option[List[Nothing]] = Some(List())</span>
+<span id="cb12-15"><a href="#cb12-15"></a></span>
+<span id="cb12-16"><a href="#cb12-16"></a>scala&gt; ~res32</span>
+<span id="cb12-17"><a href="#cb12-17"></a>res33: List[Nothing] = List()</span>
+<span id="cb12-18"><a href="#cb12-18"></a></span>
+<span id="cb12-19"><a href="#cb12-19"></a>scala&gt; <span class="fu">some</span>(List(<span class="dv">10</span>))</span>
+<span id="cb12-20"><a href="#cb12-20"></a>res34: Option[List[Int]] = Some(List(<span class="dv">10</span>))</span>
+<span id="cb12-21"><a href="#cb12-21"></a></span>
+<span id="cb12-22"><a href="#cb12-22"></a>scala&gt; ~res34</span>
+<span id="cb12-23"><a href="#cb12-23"></a>res35: List[Int] = List(<span class="dv">10</span>)</span></code></pre></div>
+<p>Ничего слишком сложного, просто несколько вспомогательных функций. Существует множество двугих интересных вещей вокруг Option в Scalaz, но это уже выходит за рамки данной статьи.</p>
+<h4 id="более-функциональный-boolean">Более функциональный Boolean</h4>
+<p>Scalaz так же добавляет больше функциональности к типу Boolean:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb13-1"><a href="#cb13-1"></a># Тернарный опертор возвращается!</span>
+<span id="cb13-2"><a href="#cb13-2"></a>scala&gt; <span class="kw">true</span> ? <span class="st">&quot;This is true&quot;</span> | <span class="st">&quot;This is false&quot;</span></span>
+<span id="cb13-3"><a href="#cb13-3"></a>res45: String = This is <span class="kw">true</span></span>
+<span id="cb13-4"><a href="#cb13-4"></a></span>
+<span id="cb13-5"><a href="#cb13-5"></a>scala&gt; <span class="kw">false</span> ? <span class="st">&quot;This is true&quot;</span> | <span class="st">&quot;This is false&quot;</span></span>
+<span id="cb13-6"><a href="#cb13-6"></a>res46: String = This is <span class="kw">false</span></span>
+<span id="cb13-7"><a href="#cb13-7"></a></span>
+<span id="cb13-8"><a href="#cb13-8"></a># Возвращает передаваемый аргумент в случае <span class="kw">true</span>, иначе возвращает <span class="st">&quot;ноль&quot;</span> типа A</span>
+<span id="cb13-9"><a href="#cb13-9"></a>scala&gt; <span class="kw">false</span> ?? List(<span class="dv">120</span>,<span class="dv">20321</span>)</span>
+<span id="cb13-10"><a href="#cb13-10"></a>res55: List[Int] = List()</span>
+<span id="cb13-11"><a href="#cb13-11"></a></span>
+<span id="cb13-12"><a href="#cb13-12"></a>scala&gt; <span class="kw">true</span> ?? List(<span class="dv">120</span>,<span class="dv">20321</span>)</span>
+<span id="cb13-13"><a href="#cb13-13"></a>res56: List[Int] = List(<span class="dv">120</span>, <span class="dv">20321</span>)</span></code></pre></div>
+<p>И целый список операторов для бинарной арифметики:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb14-1"><a href="#cb14-1"></a><span class="co">// Conjunction. (AND)</span></span>
+<span id="cb14-2"><a href="#cb14-2"></a><span class="kw">final</span> <span class="kw">def</span> ∧(q: =&gt; Boolean) = b.<span class="fu">conjunction</span>(self, q)</span>
+<span id="cb14-3"><a href="#cb14-3"></a><span class="co">// Conjunction. (AND)</span></span>
+<span id="cb14-4"><a href="#cb14-4"></a><span class="kw">final</span> <span class="kw">def</span> /\(q: =&gt; Boolean) = ∧(q)</span>
+<span id="cb14-5"><a href="#cb14-5"></a><span class="co">// Disjunction. (OR)</span></span>
+<span id="cb14-6"><a href="#cb14-6"></a><span class="kw">final</span> <span class="kw">def</span> ∨(q: =&gt; Boolean): Boolean = b.<span class="fu">disjunction</span>(self, q)</span>
+<span id="cb14-7"><a href="#cb14-7"></a><span class="co">// Disjunction. (OR)</span></span>
+<span id="cb14-8"><a href="#cb14-8"></a><span class="kw">final</span> <span class="kw">def</span> \/(q: =&gt; Boolean): Boolean = ∨(q)</span>
+<span id="cb14-9"><a href="#cb14-9"></a><span class="co">// Negation of Disjunction. (NOR)</span></span>
+<span id="cb14-10"><a href="#cb14-10"></a><span class="kw">final</span> <span class="kw">def</span> !||(q: =&gt; Boolean) = b.<span class="fu">nor</span>(self, q)</span>
+<span id="cb14-11"><a href="#cb14-11"></a><span class="co">// Negation of Conjunction. (NAND)</span></span>
+<span id="cb14-12"><a href="#cb14-12"></a><span class="kw">final</span> <span class="kw">def</span> !&amp;&amp;(q: =&gt; Boolean) = b.<span class="fu">nand</span>(self, q)</span>
+<span id="cb14-13"><a href="#cb14-13"></a><span class="co">// Conditional.</span></span>
+<span id="cb14-14"><a href="#cb14-14"></a><span class="kw">final</span> <span class="kw">def</span> --&gt;(q: =&gt; Boolean) = b.<span class="fu">conditional</span>(self, q)</span>
+<span id="cb14-15"><a href="#cb14-15"></a><span class="co">// Inverse Conditional.</span></span>
+<span id="cb14-16"><a href="#cb14-16"></a><span class="kw">final</span> <span class="kw">def</span> &lt;--(q: =&gt; Boolean) = b.<span class="fu">inverseConditional</span>(self, q)</span>
+<span id="cb14-17"><a href="#cb14-17"></a><span class="co">// Bi-Conditional.</span></span>
+<span id="cb14-18"><a href="#cb14-18"></a><span class="kw">final</span> <span class="kw">def</span> &lt;--&gt;(q: =&gt; Boolean) = b.<span class="fu">conditional</span>(self, q) &amp;&amp; b.<span class="fu">inverseConditional</span>(self, q)</span>
+<span id="cb14-19"><a href="#cb14-19"></a><span class="co">// Inverse Conditional.</span></span>
+<span id="cb14-20"><a href="#cb14-20"></a><span class="kw">final</span> <span class="kw">def</span> ⇐(q: =&gt; Boolean) = b.<span class="fu">inverseConditional</span>(self, q)</span>
+<span id="cb14-21"><a href="#cb14-21"></a><span class="co">// Negation of Conditional.</span></span>
+<span id="cb14-22"><a href="#cb14-22"></a><span class="kw">final</span> <span class="kw">def</span> ⇏(q: =&gt; Boolean) = b.<span class="fu">negConditional</span>(self, q)</span>
+<span id="cb14-23"><a href="#cb14-23"></a><span class="co">// Negation of Conditional.</span></span>
+<span id="cb14-24"><a href="#cb14-24"></a><span class="kw">final</span> <span class="kw">def</span> -/&gt;(q: =&gt; Boolean) = b.<span class="fu">negConditional</span>(self, q)</span>
+<span id="cb14-25"><a href="#cb14-25"></a><span class="co">// Negation of Inverse Conditional.</span></span>
+<span id="cb14-26"><a href="#cb14-26"></a><span class="kw">final</span> <span class="kw">def</span> ⇍(q: =&gt; Boolean) = b.<span class="fu">negInverseConditional</span>(self, q)</span>
+<span id="cb14-27"><a href="#cb14-27"></a><span class="co">// Negation of Inverse Conditional.</span></span>
+<span id="cb14-28"><a href="#cb14-28"></a><span class="kw">final</span> <span class="kw">def</span> &lt;\-(q: =&gt; Boolean) = b.<span class="fu">negInverseConditional</span>(self, q)</span></code></pre></div>
+<p>Например:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb15-1"><a href="#cb15-1"></a>scala&gt; <span class="kw">true</span> /\ <span class="kw">true</span></span>
+<span id="cb15-2"><a href="#cb15-2"></a>res57: Boolean = <span class="kw">true</span></span>
+<span id="cb15-3"><a href="#cb15-3"></a></span>
+<span id="cb15-4"><a href="#cb15-4"></a>scala&gt; <span class="kw">true</span> /\ <span class="kw">false</span></span>
+<span id="cb15-5"><a href="#cb15-5"></a>res58: Boolean = <span class="kw">false</span></span>
+<span id="cb15-6"><a href="#cb15-6"></a></span>
+<span id="cb15-7"><a href="#cb15-7"></a>scala&gt; <span class="kw">true</span> !&amp;&amp; <span class="kw">false</span></span>
+<span id="cb15-8"><a href="#cb15-8"></a>res59: Boolean = <span class="kw">true</span></span></code></pre></div>
+<h4 id="больше-дополнительных-функций">Больше дополнительных функций</h4>
+<p>В данной статье мы рассмотрели всего несколько дополнительных функций из Scalaz. Если вас заинтересовала эта тема вам стоит заглянуть в код следующих классов:</p>
+<ul>
+<li>scalaz.syntax.std.BooleanOps</li>
+<li>scalaz.syntax.std.ListOps</li>
+<li>scalaz.syntax.std.MapOps</li>
+<li>scalaz.syntax.std.OptionOps</li>
+<li>scalaz.syntax.std.StringOps</li>
+</ul>
+<p>Ещё немного примеров:</p>
+<h4 id="балуемся-с-list">Балуемся с List</h4>
+<div class="sourceCode" id="cb16"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb16-1"><a href="#cb16-1"></a># взять хвост как Option</span>
+<span id="cb16-2"><a href="#cb16-2"></a>scala&gt; List(<span class="dv">10</span>,<span class="dv">20</span>,<span class="dv">30</span>)</span>
+<span id="cb16-3"><a href="#cb16-3"></a>res60: List[Int] = List(<span class="dv">10</span>, <span class="dv">20</span>, <span class="dv">30</span>)</span>
+<span id="cb16-4"><a href="#cb16-4"></a></span>
+<span id="cb16-5"><a href="#cb16-5"></a>scala&gt; res60.<span class="fu">tailOption</span></span>
+<span id="cb16-6"><a href="#cb16-6"></a>res61: Option[List[Int]] = Some(List(<span class="dv">20</span>, <span class="dv">30</span>))</span>
+<span id="cb16-7"><a href="#cb16-7"></a></span>
+<span id="cb16-8"><a href="#cb16-8"></a>scala&gt; List()</span>
+<span id="cb16-9"><a href="#cb16-9"></a>res64: List[Nothing] = List()</span>
+<span id="cb16-10"><a href="#cb16-10"></a></span>
+<span id="cb16-11"><a href="#cb16-11"></a>scala&gt; res64.<span class="fu">tailOption</span></span>
+<span id="cb16-12"><a href="#cb16-12"></a>res65: Option[List[Nothing]] = None</span>
+<span id="cb16-13"><a href="#cb16-13"></a></span>
+<span id="cb16-14"><a href="#cb16-14"></a># <span class="st">&quot;усыпать&quot;</span> список дополнительными элементами</span>
+<span id="cb16-15"><a href="#cb16-15"></a>scala&gt; List(<span class="dv">10</span>,<span class="dv">20</span>,<span class="dv">30</span>)</span>
+<span id="cb16-16"><a href="#cb16-16"></a>res66: List[Int] = List(<span class="dv">10</span>, <span class="dv">20</span>, <span class="dv">30</span>)</span>
+<span id="cb16-17"><a href="#cb16-17"></a></span>
+<span id="cb16-18"><a href="#cb16-18"></a>scala&gt; res66.<span class="fu">intersperse</span>(<span class="dv">1</span>)</span>
+<span id="cb16-19"><a href="#cb16-19"></a>res68: List[Int] = List(<span class="dv">10</span>, <span class="dv">1</span>, <span class="dv">20</span>, <span class="dv">1</span>, <span class="dv">30</span>)</span>
+<span id="cb16-20"><a href="#cb16-20"></a></span>
+<span id="cb16-21"><a href="#cb16-21"></a># всевозможные перестановки списка</span>
+<span id="cb16-22"><a href="#cb16-22"></a>scala&gt; List(<span class="ch">'a'</span>,<span class="ch">'b'</span>,<span class="ch">'c'</span>,<span class="ch">'d'</span>).<span class="fu">powerset</span></span>
+<span id="cb16-23"><a href="#cb16-23"></a>res71: List[List[Char]] = List(List(a, b, c, d), List(a, b, c), List(a, b, d), List(a, b), List(a, c, d), List(a, c), List(a, d), List(a), List(b, c, d), List(b, c), List(b, d), List(b), List(c, d), List(c), List(d), List())</span></code></pre></div>
+<h4 id="забавляемся-с-map">Забавляемся с Map</h4>
+<div class="sourceCode" id="cb17"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb17-1"><a href="#cb17-1"></a># безопасно изменить запись</span>
+<span id="cb17-2"><a href="#cb17-2"></a>res77: scala.<span class="fu">collection</span>.<span class="fu">immutable</span>.<span class="fu">Map</span>[Char,Int] = Map(a -&gt; <span class="dv">10</span>, b -&gt; <span class="dv">20</span>)</span>
+<span id="cb17-3"><a href="#cb17-3"></a>scala&gt; res77.<span class="fu">alter</span>(<span class="ch">'a'</span>)(f =&gt; f |+| <span class="fu">some</span>(<span class="dv">5</span>))</span>
+<span id="cb17-4"><a href="#cb17-4"></a>res78: Map[Char,Int] = Map(a -&gt; <span class="dv">15</span>, b -&gt; <span class="dv">20</span>)</span>
+<span id="cb17-5"><a href="#cb17-5"></a></span>
+<span id="cb17-6"><a href="#cb17-6"></a># пересечь два Map'а и определить какое значение оставить для каждого из ключей</span>
+<span id="cb17-7"><a href="#cb17-7"></a>scala&gt; <span class="kw">val</span> m1 =  Map(<span class="ch">'a'</span> -&gt; <span class="dv">100</span>, <span class="ch">'b'</span> -&gt; <span class="dv">200</span>, <span class="ch">'c'</span> -&gt; <span class="dv">300</span>)</span>
+<span id="cb17-8"><a href="#cb17-8"></a>m1: scala.<span class="fu">collection</span>.<span class="fu">immutable</span>.<span class="fu">Map</span>[Char,Int] = Map(a -&gt; <span class="dv">100</span>, b -&gt; <span class="dv">200</span>, c -&gt; <span class="dv">300</span>)</span>
+<span id="cb17-9"><a href="#cb17-9"></a></span>
+<span id="cb17-10"><a href="#cb17-10"></a>scala&gt; <span class="kw">val</span> m2 = Map(<span class="ch">'b'</span> -&gt; <span class="dv">2000</span>, <span class="ch">'c'</span> -&gt; <span class="dv">3000</span>, <span class="ch">'d'</span> -&gt; <span class="dv">4000</span>)</span>
+<span id="cb17-11"><a href="#cb17-11"></a>m2: scala.<span class="fu">collection</span>.<span class="fu">immutable</span>.<span class="fu">Map</span>[Char,Int] = Map(b -&gt; <span class="dv">2000</span>, c -&gt; <span class="dv">3000</span>, d -&gt; <span class="dv">4000</span>)</span>
+<span id="cb17-12"><a href="#cb17-12"></a></span>
+<span id="cb17-13"><a href="#cb17-13"></a>scala&gt; m1.<span class="fu">intersectWith</span>(m2)((m1v,m2v) =&gt; m2v)</span>
+<span id="cb17-14"><a href="#cb17-14"></a>res23: Map[Char,Int] = Map(b -&gt; <span class="dv">2000</span>, c -&gt; <span class="dv">3000</span>)</span>
+<span id="cb17-15"><a href="#cb17-15"></a></span>
+<span id="cb17-16"><a href="#cb17-16"></a>scala&gt; m1.<span class="fu">intersectWith</span>(m2)((m1v,m2v) =&gt; m1v)</span>
+<span id="cb17-17"><a href="#cb17-17"></a>res24: Map[Char,Int] = Map(b -&gt; <span class="dv">200</span>, c -&gt; <span class="dv">300</span>)</span></code></pre></div>
+<h4 id="развлекаемся-с-string">Развлекаемся с String</h4>
+<div class="sourceCode" id="cb18"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb18-1"><a href="#cb18-1"></a># сделать строку множественного числа(наивный способ)</span>
+<span id="cb18-2"><a href="#cb18-2"></a>scala&gt; <span class="st">&quot;Typeclass&quot;</span>.<span class="fu">plural</span>(<span class="dv">1</span>)</span>
+<span id="cb18-3"><a href="#cb18-3"></a>res26: String = Typeclass</span>
+<span id="cb18-4"><a href="#cb18-4"></a></span>
+<span id="cb18-5"><a href="#cb18-5"></a>scala&gt; <span class="st">&quot;Typeclass&quot;</span>.<span class="fu">plural</span>(<span class="dv">2</span>)</span>
+<span id="cb18-6"><a href="#cb18-6"></a>res27: String = Typeclasss</span>
+<span id="cb18-7"><a href="#cb18-7"></a></span>
+<span id="cb18-8"><a href="#cb18-8"></a>scala&gt; <span class="st">&quot;Day&quot;</span>.<span class="fu">plural</span>(<span class="dv">2</span>)</span>
+<span id="cb18-9"><a href="#cb18-9"></a>res28: String = Days</span>
+<span id="cb18-10"><a href="#cb18-10"></a></span>
+<span id="cb18-11"><a href="#cb18-11"></a>scala&gt; <span class="st">&quot;Weekly&quot;</span>.<span class="fu">plural</span>(<span class="dv">2</span>)</span>
+<span id="cb18-12"><a href="#cb18-12"></a>res29: String = Weeklies</span>
+<span id="cb18-13"><a href="#cb18-13"></a></span>
+<span id="cb18-14"><a href="#cb18-14"></a># безопасный парсинг значений типов Boolean, Byte, Short, Long, Float, Double и Int</span>
+<span id="cb18-15"><a href="#cb18-15"></a>scala&gt; <span class="st">&quot;10&quot;</span>.<span class="fu">parseDouble</span></span>
+<span id="cb18-16"><a href="#cb18-16"></a>res30: scalaz.<span class="fu">Validation</span>[NumberFormatException,Double] = <span class="fu">Success</span>(<span class="fl">10.0</span>)</span>
+<span id="cb18-17"><a href="#cb18-17"></a></span>
+<span id="cb18-18"><a href="#cb18-18"></a>scala&gt; <span class="st">&quot;ten&quot;</span>.<span class="fu">parseDouble</span></span>
+<span id="cb18-19"><a href="#cb18-19"></a>res31: scalaz.<span class="fu">Validation</span>[NumberFormatException,Double] = <span class="fu">Failure</span>(java.<span class="fu">lang</span>.<span class="fu">NumberFormatException</span>: For input string: <span class="st">&quot;ten&quot;</span>)</span></code></pre></div>
+<h3 id="заключение">Заключение</h3>
+<p>Я надеюсь, что вам понравилось это краткое введение в Scalaz. И как вы уже видели эти простые функции уже позволяют делать множество интересных вещей, без необходимости разбираться с внутренними сложностями Scalaz. Паттерн рассматриваемый здесь называется TypeClass Pattern и используется для расширения стандартной функциональности типов в Scala.</p>
+<p>В следующей статье мы познакомимся с более сложными вещами и поработаем с монадными трансформерами.</p>
+<p><a href="http://www.smartjava.org/content/scalaz-features-everyday-usage-part-1-typeclasses-and-scala-extensions">Оригинальная статья.</a></p>
+
+<div id="socialButtons">
+  <script type="text/javascript" src="//yastatic.net/es5-shims/0.0.2/es5-shims.min.js" charset="utf-8"></script>
+  <script type="text/javascript" src="//yastatic.net/share2/share.js" charset="utf-8"></script>
+  <div class="ya-share2" data-services="vkontakte,facebook,linkedin,gplus,twitter,blogger,reddit,evernote,lj,pocket" data-counter></div>
+</div>
+
+<div id="disqus_thread"></div>
+<script>
+
+/**
+*  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+*  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+/*
+var disqus_config = function () {
+this.page.url = PAGE_URL;  // Replace PAGE_URL with your page's canonical URL variable
+this.page.identifier = PAGE_IDENTIFIER; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+};
+*/
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = '//macs-club.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+        </div>
+
+        <div id="footer">
+            Сайт создан с помощью
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+    </body>
+</html>

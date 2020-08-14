@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>MaCS-Club Blog - Типы и Логика</title>
+        <link rel="stylesheet" href="../css/default.css" />
+        <link rel="stylesheet" href="../css/syntax.css" />
+    </head>
+    <body>
+        <div id="header">
+            <div id="logo">
+                <a href="../">MaCS-Club</a>
+            </div>
+            <div id="navigation">
+                <a href="../">Главная</a>
+                <a href="../about.html">О нас</a>
+                <a href="../contact.html">Контакты</a>
+                <a href="../archive.html">Архив</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <h1>Типы и Логика</h1>
+            <div class="info">
+    Дата: May  1, 2020
+    
+        Автор: BeiZero
+    
+</div>
+<div class="info">
+    
+    Tags: <a href="../tags/agda.html">agda</a>, <a href="../tags/%D1%81%D0%BE%D0%BE%D1%82%D0%B2%D0%B5%D1%82%D1%81%D1%82%D0%B2%D0%B8%D0%B5%20%D0%9A%D0%B0%D1%80%D1%80%D0%B8-%D0%A5%D0%BE%D0%B2%D0%B0%D1%80%D0%B4%D0%B0.html">соответствие Карри-Ховарда</a>
+    
+</div>
+
+<p>Это текстовая версия <a href="https://youtu.be/s5NeZDnF79Q">видео-лекции</a> с нашего канала.</p>
+<h2 id="теория-типов">Теория типов</h2>
+<p>Теория типов – формальная система сопровождаемая классификацией элементов с помощью типов, образующих некоторую иерархию.</p>
+<p>Типы в программировании являются применением теории типов к конструкциям языков классификацируя различные выражения по разновидностям вычисляемых ими значений.</p>
+<p>Теории типов изначально возникли как альтернатива теории множеств из-за некоторых противоречивых ситуаций, которые появляются в наивной теории множеств при рассмотрении некоторых определений множеств.</p>
+<h2 id="парадокс-рассела">Парадокс Рассела</h2>
+<p>Наиболее важным примером является парадокс Рассела рассматривающий множество всех множеств, которые не содержат самих себя</p>
+<pre><code>R = { x | x ∉ x }</code></pre>
+<p>Ясно, что это множество содержит само себя тогда и только тогда, когда оно не содержит само себя, что является противоречием.</p>
+<p>Эта проблема в математике классически решается аксиоматизацией теории множеств(система Цермело — Френкеля или система фон Неймана — Бернайса — Гёделя) либо ограничивающей создание множеств из произвольных элементов либо вводя дополнительную сущность “класс” как замену множеству множеств, но эта проблема может быть решена и с помощью теории типов благодаря классификации объектов.</p>
+<h2 id="вселенные-типов">Вселенные типов</h2>
+<p>Как я уже говорил в системе типов Agda и во многих других решается с помощью иерархии типов</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb2-1"><a href="#cb2-1"></a>U, U₁, U₂ <span class="ot">...</span></span></code></pre></div>
+<p>и <code>Uᵢ : Uᵢ₊₁</code> для любого <code>i</code>. Таким образом у нас не существует типа “универсума” содержащего все типы, сущности которая и приводит к противоречиям, но мы можем рассуждать в терминах “вселенных” рассматривая элементы на различных уровнях</p>
+<h2 id="соответствие-карри-ховарда">Соответствие Карри — Ховарда</h2>
+<p>Соответствие Карри — Ховарда это наблюдаемая структурная эквивалентность между математическими доказательствами и программами, которая может быть формализована в виде изоморфизма между логическими системами и типизированными исчислениями.</p>
+<p>Названо оно так в честь Хаскелла Карри и Уильяма Ховарда, которые как раз и заметили, что построение конструктивных доказательств схожи с описанием вычислений, а высказывания конструктивной логики схожи с типами вычисляемых выражений.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Логические системы</th>
+<th>Языки программирования</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Высказывание</td>
+<td>Тип</td>
+</tr>
+<tr class="even">
+<td>Доказательство высказывания P</td>
+<td>Терм (выражение) типа P</td>
+</tr>
+<tr class="odd">
+<td>Утверждение P доказуемо</td>
+<td>Тип P обитаем</td>
+</tr>
+<tr class="even">
+<td>Импликация P ⇒ Q</td>
+<td>Функциональный тип P → Q</td>
+</tr>
+<tr class="odd">
+<td>Конъюнкция P ∧ Q</td>
+<td>Тип произведения (пары) P × Q</td>
+</tr>
+<tr class="even">
+<td>Дизъюнкция P ∨ Q</td>
+<td>Тип суммы (размеченного объединения) P + Q</td>
+</tr>
+<tr class="odd">
+<td>Истинная формула</td>
+<td>Единичный тип</td>
+</tr>
+<tr class="even">
+<td>Ложная формула</td>
+<td>Пустой тип</td>
+</tr>
+<tr class="odd">
+<td>Квантор всеобщности ∀</td>
+<td>Тип зависимого произведения (Π-тип)</td>
+</tr>
+<tr class="even">
+<td>Квантор существования ∃</td>
+<td>Тип зависимой суммы (Σ-тип)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="аксиомы-интуиционистской-логики">Аксиомы интуиционистской логики</h2>
+<p>В рамках данной лекции я хочу показать выполнение аксиом интуиционисткой логики. Интуиционисткая логика отличается от классической отсутствием аксиомы исключённого третьего и таким образом все доказательства являются конструктивными, т.е., например, для доказательства существования какого-либо объекта нужно его предоставить или сконструировать, в отличии от классической логики в которой можно обосновать существование объекта показав, что его не может не существовать.</p>
+<p>Для начала объявим единичный тип, это тип в котором есть всего один элемент <code>tt</code> и по соответствию Карри-Ховарда он эквивалентен <code>true</code>.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb3-1"><a href="#cb3-1"></a><span class="kw">data</span> ⊤ <span class="ot">:</span> <span class="dt">Set</span> <span class="kw">where</span> <span class="co">--\top</span></span>
+<span id="cb3-2"><a href="#cb3-2"></a>  tt <span class="ot">:</span> ⊤</span></code></pre></div>
+<p>так же объявим пустой тип, который так же называется дном, как тип без конструкторов</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb4-1"><a href="#cb4-1"></a><span class="kw">data</span> ⊥ <span class="ot">:</span> <span class="dt">Set</span> <span class="kw">where</span> <span class="co">--\bot</span></span></code></pre></div>
+<p>и определим для него элиминатор позволяющий выводить любое утверждение из пустого типа</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb5-1"><a href="#cb5-1"></a>⊥-elim <span class="ot">:</span> <span class="ot">{</span>A <span class="ot">:</span> <span class="dt">Set</span><span class="ot">}</span> <span class="ot">→</span> ⊥ <span class="ot">→</span> A</span>
+<span id="cb5-2"><a href="#cb5-2"></a>⊥-elim <span class="ot">=</span> <span class="ot">λ</span> <span class="ot">()</span> <span class="co">--\lambda или \Gl</span></span></code></pre></div>
+<p><code>()</code> позволяет сказать Agda, что данная ситуация является невозможной т.е. не существует элемента для которой её можно вызвать.</p>
+<p>Импликации ⇒ в Agda соответствует функциональный тип →. Покажем, что это в точности одно и то же:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb6-1"><a href="#cb6-1"></a>implies₁ <span class="ot">:</span> ⊤ <span class="ot">→</span> ⊤</span>
+<span id="cb6-2"><a href="#cb6-2"></a>implies₁ x <span class="ot">=</span> x</span>
+<span id="cb6-3"><a href="#cb6-3"></a></span>
+<span id="cb6-4"><a href="#cb6-4"></a>implies₂ <span class="ot">:</span> ⊥ <span class="ot">→</span> ⊥</span>
+<span id="cb6-5"><a href="#cb6-5"></a>implies₂ x <span class="ot">=</span> x</span>
+<span id="cb6-6"><a href="#cb6-6"></a></span>
+<span id="cb6-7"><a href="#cb6-7"></a>implies₃ <span class="ot">:</span> ⊥ <span class="ot">→</span> ⊤</span>
+<span id="cb6-8"><a href="#cb6-8"></a>implies₃ x <span class="ot">=</span> ⊥-elim x</span>
+<span id="cb6-9"><a href="#cb6-9"></a></span>
+<span id="cb6-10"><a href="#cb6-10"></a>implies₄ <span class="ot">:</span> ⊤ <span class="ot">→</span> ⊥</span>
+<span id="cb6-11"><a href="#cb6-11"></a>implies₄ x <span class="ot">=</span> ?</span></code></pre></div>
+<p>а вот элемент типа <code>⊤ → ⊥</code> мы уже сконструировать не можем т.к. конструктора для ⊥ нет, что соответствует ложности данного утверждения в логике.</p>
+<p>Ещё несколько примеров для функционального типа как импликации:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb7-1"><a href="#cb7-1"></a>proof₁ <span class="ot">:</span> <span class="ot">{</span>A <span class="ot">:</span> <span class="dt">Set</span><span class="ot">}</span> <span class="ot">→</span> A <span class="ot">→</span> A</span>
+<span id="cb7-2"><a href="#cb7-2"></a>proof₁ a <span class="ot">=</span> a</span></code></pre></div>
+<p>что можно прочитать как “из А следует А” или “из существования терма типа А следует существование терма типа А”. А вот “из А следует B” ложное утверждение терм такого такого типа мы составить не можем:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb8-1"><a href="#cb8-1"></a>!proof <span class="ot">:</span> <span class="ot">{</span>A B <span class="ot">:</span> <span class="dt">Set</span><span class="ot">}</span> <span class="ot">→</span> A <span class="ot">→</span> B</span>
+<span id="cb8-2"><a href="#cb8-2"></a>!proof <span class="ot">=</span> ?</span></code></pre></div>
+<p>Так же можем доказать, что из А следует то, что из B следует B.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb9-1"><a href="#cb9-1"></a>proof₂ <span class="ot">:</span> <span class="ot">{</span>A B <span class="ot">:</span> <span class="dt">Set</span><span class="ot">}</span> <span class="ot">→</span> A <span class="ot">→</span> <span class="ot">(</span>B <span class="ot">→</span> B<span class="ot">)</span></span>
+<span id="cb9-2"><a href="#cb9-2"></a>proof₂ <span class="ot">_</span> <span class="ot">=</span> <span class="ot">λ</span> x <span class="ot">→</span> x</span></code></pre></div>
+<p>и</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb10-1"><a href="#cb10-1"></a>proof₃ <span class="ot">:</span> <span class="ot">{</span>P Q R <span class="ot">:</span> <span class="dt">Set</span><span class="ot">}</span> <span class="ot">→</span> <span class="ot">(</span>P <span class="ot">→</span> Q <span class="ot">→</span> R<span class="ot">)</span> <span class="ot">→</span> <span class="ot">(</span>P <span class="ot">→</span> Q<span class="ot">)</span> <span class="ot">→</span> P <span class="ot">→</span> R</span>
+<span id="cb10-2"><a href="#cb10-2"></a>proof₃ f g x <span class="ot">=</span> <span class="ot">(</span>f x<span class="ot">)(</span>g x<span class="ot">)</span></span></code></pre></div>
+<p>Теперь можем показать, что выполняется первая и вторая аксиомы интуиционисткого искчисления высказываний.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb11-1"><a href="#cb11-1"></a>axiom₁ <span class="ot">:</span> <span class="ot">{</span>A B <span class="ot">:</span> <span class="dt">Set</span><span class="ot">}</span> <span class="ot">→</span> A <span class="ot">→</span> <span class="ot">(</span>B <span class="ot">→</span> A<span class="ot">)</span></span>
+<span id="cb11-2"><a href="#cb11-2"></a>axiom₁ a <span class="ot">=</span> <span class="ot">λ</span> <span class="ot">_</span> <span class="ot">→</span> a</span>
+<span id="cb11-3"><a href="#cb11-3"></a></span>
+<span id="cb11-4"><a href="#cb11-4"></a>axiom₂ <span class="ot">:</span> <span class="ot">{</span>A B C <span class="ot">:</span> <span class="dt">Set</span><span class="ot">}</span> <span class="ot">→</span> <span class="ot">(</span>A <span class="ot">→</span> B<span class="ot">)</span> <span class="ot">→</span> <span class="ot">((</span>B <span class="ot">→</span> C<span class="ot">)</span> <span class="ot">→</span> <span class="ot">(</span>A <span class="ot">→</span> C<span class="ot">))</span></span>
+<span id="cb11-5"><a href="#cb11-5"></a>axiom₂ f g h <span class="ot">=</span> g <span class="ot">(</span>f h<span class="ot">)</span></span></code></pre></div>
+<p>Здесь большие скобочки лишние т.к. стрелочка правоассоциативная, но в оригинальной формулировке аксиомы они есть, поэтому оставим так.</p>
+<p>Следующие три аксиомы используют коньюнкцию соответственно для того, чтобы показать их выполнение нужно определить тип пары.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb12-1"><a href="#cb12-1"></a><span class="kw">data</span> <span class="ot">_</span>×<span class="ot">_</span> <span class="ot">(</span>A <span class="ot">:</span> <span class="dt">Set</span><span class="ot">)</span> <span class="ot">(</span>B <span class="ot">:</span> <span class="dt">Set</span><span class="ot">)</span> <span class="ot">:</span> <span class="dt">Set</span> <span class="kw">where</span> <span class="co">--\x</span></span>
+<span id="cb12-2"><a href="#cb12-2"></a>    &lt;<span class="ot">_</span>,<span class="ot">_</span>&gt; <span class="ot">:</span> A <span class="ot">→</span> B <span class="ot">→</span> <span class="ot">(</span>A × B<span class="ot">)</span></span></code></pre></div>
+<p>и теперь уже можем показать выполнение следующих трёх аксиом:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb13-1"><a href="#cb13-1"></a>axiom₃ <span class="ot">:</span> <span class="ot">{</span>A B <span class="ot">:</span> <span class="dt">Set</span><span class="ot">}</span> <span class="ot">→</span> A <span class="ot">→</span> <span class="ot">(</span>B <span class="ot">→</span> A × B<span class="ot">)</span></span>
+<span id="cb13-2"><a href="#cb13-2"></a>axiom₃ a b <span class="ot">=</span> &lt; a , b &gt;</span>
+<span id="cb13-3"><a href="#cb13-3"></a></span>
+<span id="cb13-4"><a href="#cb13-4"></a>axiom₄ <span class="ot">:</span> <span class="ot">{</span>A B <span class="ot">:</span> <span class="dt">Set</span><span class="ot">}</span> <span class="ot">→</span> <span class="ot">(</span>A × B<span class="ot">)</span> <span class="ot">→</span> A</span>
+<span id="cb13-5"><a href="#cb13-5"></a>axiom₄  &lt; a , b &gt; <span class="ot">=</span> a</span>
+<span id="cb13-6"><a href="#cb13-6"></a></span>
+<span id="cb13-7"><a href="#cb13-7"></a>axiom₅ <span class="ot">:</span> <span class="ot">{</span>A B <span class="ot">:</span> <span class="dt">Set</span><span class="ot">}</span> <span class="ot">→</span> <span class="ot">(</span>A × B<span class="ot">)</span> <span class="ot">→</span> B</span>
+<span id="cb13-8"><a href="#cb13-8"></a>axiom₅  &lt; a , b &gt; <span class="ot">=</span> b</span></code></pre></div>
+<p>для следующих аксиом нужна дизьюнкция, поэтому сначала нужно определить тип суммы</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb14-1"><a href="#cb14-1"></a><span class="kw">data</span> <span class="ot">_</span>∣<span class="ot">_</span> <span class="ot">(</span>A B <span class="ot">:</span> <span class="dt">Set</span><span class="ot">)</span> <span class="ot">:</span> <span class="dt">Set</span> <span class="kw">where</span></span>
+<span id="cb14-2"><a href="#cb14-2"></a>   Left <span class="ot">:</span> A <span class="ot">→</span> A ∣ B</span>
+<span id="cb14-3"><a href="#cb14-3"></a>   Right <span class="ot">:</span> A <span class="ot">→</span> A ∣ B</span></code></pre></div>
+<p>и три акиомы</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb15-1"><a href="#cb15-1"></a>axiom₆ <span class="ot">:</span> <span class="ot">{</span>A B <span class="ot">:</span> <span class="dt">Set</span><span class="ot">}</span> <span class="ot">→</span> A <span class="ot">→</span> A ∣ B</span>
+<span id="cb15-2"><a href="#cb15-2"></a>axiom₆ <span class="ot">=</span> Left</span>
+<span id="cb15-3"><a href="#cb15-3"></a></span>
+<span id="cb15-4"><a href="#cb15-4"></a>axiom₇ <span class="ot">:</span> <span class="ot">{</span>A B <span class="ot">:</span> <span class="dt">Set</span><span class="ot">}</span> <span class="ot">→</span> B <span class="ot">→</span> A ∣ B</span>
+<span id="cb15-5"><a href="#cb15-5"></a>axiom₇ <span class="ot">=</span> Right</span>
+<span id="cb15-6"><a href="#cb15-6"></a></span>
+<span id="cb15-7"><a href="#cb15-7"></a>axiom₈ <span class="ot">:</span> <span class="ot">{</span>A B C <span class="ot">:</span> <span class="dt">Set</span><span class="ot">}</span> <span class="ot">→</span> <span class="ot">(</span>A <span class="ot">→</span> C<span class="ot">)</span> <span class="ot">→</span> <span class="ot">((</span>B <span class="ot">→</span> C<span class="ot">)</span> <span class="ot">→</span> <span class="ot">(</span>A ∣ B <span class="ot">→</span> C<span class="ot">))</span></span>
+<span id="cb15-8"><a href="#cb15-8"></a>axiom₈ f g <span class="ot">(</span>Left a<span class="ot">)</span> <span class="ot">=</span> f a</span>
+<span id="cb15-9"><a href="#cb15-9"></a>axiom₈ f g <span class="ot">(</span>Right b<span class="ot">)</span> <span class="ot">=</span> g b</span></code></pre></div>
+<p>введём отрицание</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb16-1"><a href="#cb16-1"></a>¬ <span class="ot">:</span> <span class="dt">Set</span> <span class="ot">→</span> <span class="dt">Set</span> <span class="co">-- for ¬ type \neg</span></span>
+<span id="cb16-2"><a href="#cb16-2"></a>¬ A <span class="ot">=</span> A <span class="ot">→</span> ⊥</span></code></pre></div>
+<p>и последние две аксиомы интуиционисткого исчисления высказываний</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb17-1"><a href="#cb17-1"></a>axiom₉ <span class="ot">:</span> <span class="ot">{</span>A B <span class="ot">:</span> <span class="dt">Set</span><span class="ot">}</span> <span class="ot">→</span> <span class="ot">(</span>A <span class="ot">→</span> B<span class="ot">)</span> <span class="ot">→</span> <span class="ot">((</span>A <span class="ot">→</span> ¬ B<span class="ot">)</span> <span class="ot">→</span> ¬ A<span class="ot">)</span></span>
+<span id="cb17-2"><a href="#cb17-2"></a>axiom₉ f g h <span class="ot">=</span> g h <span class="ot">(</span>f h<span class="ot">)</span></span>
+<span id="cb17-3"><a href="#cb17-3"></a></span>
+<span id="cb17-4"><a href="#cb17-4"></a>axiom₁₀ <span class="ot">:</span> <span class="ot">{</span>A B <span class="ot">:</span> <span class="dt">Set</span><span class="ot">}</span> <span class="ot">→</span> ¬ A <span class="ot">→</span> <span class="ot">(</span>A <span class="ot">→</span> B<span class="ot">)</span></span>
+<span id="cb17-5"><a href="#cb17-5"></a>axiom₁₀ f a <span class="ot">=</span> ⊥-elim <span class="ot">(</span>f a<span class="ot">)</span></span></code></pre></div>
+<p>Так же можем показать выполнение двух аксиом расширяющих систему до интуиционисткого исчисления предикатов:</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb18-1"><a href="#cb18-1"></a>axiom₁₁ <span class="ot">:</span> <span class="ot">{</span>A <span class="ot">:</span> <span class="dt">Set</span><span class="ot">}{</span>P <span class="ot">:</span> A <span class="ot">→</span> <span class="dt">Set</span><span class="ot">}((</span>a <span class="ot">:</span> A<span class="ot">)</span> <span class="ot">→</span> P a<span class="ot">)</span> <span class="ot">→</span> <span class="ot">(</span>a₁ <span class="ot">:</span> A<span class="ot">)</span> <span class="ot">→</span> P a₁</span>
+<span id="cb18-2"><a href="#cb18-2"></a>axiom₁₁ f <span class="ot">=</span> f</span></code></pre></div>
+<p>где <code>P</code> у нас предикат, <code>((a : A) → P a)</code> – зависимая функция, которая по элементу типу <code>A</code> возвращает применение к этому элементу предиката <code>P</code> и т.к. если такая функция существует, то <code>P a</code> для каждого <code>a</code> не пуст, по свойству функционального типа, то <code>((a : A) → P a)</code> мы можем прочитать как “для любого <code>a</code> выполняется <code>P a</code>”, что как раз и показывается соответствие типа зависимой функции(он же тип зависимого произведения) квантору всеобщности. В итоге получается, что “Если для любого <code>a</code> предикат верен, то для <code>a₁</code> он так же верен”.</p>
+<p>для следующей аксиомы нам нужен будет квантор существования, ввести его можно через сигма-тип, тип зависимой суммы:</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb19-1"><a href="#cb19-1"></a><span class="kw">data</span> Σ <span class="ot">(</span>A <span class="ot">:</span> <span class="dt">Set</span><span class="ot">)</span> <span class="ot">(</span>P <span class="ot">:</span> A <span class="ot">→</span> <span class="dt">Set</span><span class="ot">)</span> <span class="ot">:</span> <span class="dt">Set</span> <span class="kw">where</span></span>
+<span id="cb19-2"><a href="#cb19-2"></a> ⟨<span class="ot">_</span>,<span class="ot">_</span>⟩ <span class="ot">:</span> <span class="ot">(</span>a <span class="ot">:</span> A<span class="ot">)</span> <span class="ot">→</span> P a <span class="ot">→</span> Σ A P <span class="co">--\&lt; \&gt; \Sigma</span></span>
+<span id="cb19-3"><a href="#cb19-3"></a></span>
+<span id="cb19-4"><a href="#cb19-4"></a>∃ <span class="ot">:</span> <span class="ot">(</span>A <span class="ot">:</span> <span class="dt">Set</span><span class="ot">)</span> <span class="ot">→</span> <span class="ot">(</span>P <span class="ot">:</span> A <span class="ot">→</span> <span class="dt">Set</span><span class="ot">)</span> <span class="ot">→</span> <span class="dt">Set</span> <span class="co">--\ex</span></span>
+<span id="cb19-5"><a href="#cb19-5"></a>∃ A P <span class="ot">=</span> Σ A P</span></code></pre></div>
+<p>Фактически тип зависимой суммы это пара в которой тип второго элемента зависит от значения первого. Ну и квантор существования это в точности Сигма тип т.к. для его конструирования нам нужно предоставить как предикат так и хотя бы один элемент для которого этот предикат истинен.</p>
+<p>Необходимо обратить внимание, что может возникнуть путаница т.к. тип зависимой суммы является обобщением типа произведения, а тип зависимого произведения является обобщением типа суммы. Почему так получается я расскажу когда будем более подробно обсуждать Пи и Сигма типы.</p>
+<p>Ну и последняя аксиома это просто определение квантора существования:</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb20-1"><a href="#cb20-1"></a>axiom₁₂ <span class="ot">:</span> <span class="ot">(</span>A <span class="ot">:</span> <span class="dt">Set</span><span class="ot">)</span> <span class="ot">→</span> <span class="ot">(</span>P <span class="ot">:</span> A <span class="ot">→</span> <span class="dt">Set</span><span class="ot">)</span> <span class="ot">→</span> <span class="dt">Set</span></span>
+<span id="cb20-2"><a href="#cb20-2"></a>axiom₁₂ <span class="ot">=</span> ∃</span></code></pre></div>
+<h2 id="упражнения">Упражнения</h2>
+<p>В качестве упражнений предлгаю:</p>
+<ol type="1">
+<li>Реализовать логическую операцию эквивалентности</li>
+</ol>
+<div class="sourceCode" id="cb21"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb21-1"><a href="#cb21-1"></a> <span class="ot">_</span>⇔<span class="ot">_</span> <span class="ot">:</span> <span class="dt">Set</span> <span class="ot">→</span> <span class="dt">Set</span> <span class="ot">→</span> <span class="dt">Set</span> <span class="co">--\&lt;=&gt;</span></span></code></pre></div>
+<ol start="2" type="1">
+<li>Доказать коммутативность операторов произведения и суммы типов</li>
+</ol>
+<div class="sourceCode" id="cb22"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb22-1"><a href="#cb22-1"></a>×-comm <span class="ot">:</span> <span class="ot">{</span>P Q <span class="ot">:</span> <span class="dt">Set</span><span class="ot">}</span> <span class="ot">→</span> <span class="ot">(</span>P × Q<span class="ot">)</span> ⇔ <span class="ot">(</span>Q × P<span class="ot">)</span></span>
+<span id="cb22-2"><a href="#cb22-2"></a>∣-comm <span class="ot">:</span> <span class="ot">{</span>P Q <span class="ot">:</span> <span class="dt">Set</span><span class="ot">}</span> <span class="ot">→</span> <span class="ot">(</span>P ∣ Q<span class="ot">)</span> ⇔ <span class="ot">(</span>Q ∣ P<span class="ot">)</span></span></code></pre></div>
+<ol start="3" type="1">
+<li>Доказать ассоциативность операция произведения типов</li>
+</ol>
+<div class="sourceCode" id="cb23"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb23-1"><a href="#cb23-1"></a>×-assoc <span class="ot">:</span> <span class="ot">{</span> P Q R <span class="ot">:</span> <span class="dt">Set</span> <span class="ot">}</span> <span class="ot">→</span> <span class="ot">((</span>P × Q<span class="ot">)</span> × R<span class="ot">)</span> ⇔ <span class="ot">(</span>P × <span class="ot">(</span>Q × R<span class="ot">))</span></span></code></pre></div>
+<ol start="4" type="1">
+<li>Показать, что сигма тип является обобщением типа произведения</li>
+</ol>
+
+<div id="socialButtons">
+  <script type="text/javascript" src="//yastatic.net/es5-shims/0.0.2/es5-shims.min.js" charset="utf-8"></script>
+  <script type="text/javascript" src="//yastatic.net/share2/share.js" charset="utf-8"></script>
+  <div class="ya-share2" data-services="vkontakte,facebook,linkedin,gplus,twitter,blogger,reddit,evernote,lj,pocket" data-counter></div>
+</div>
+
+<div id="disqus_thread"></div>
+<script>
+
+/**
+*  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+*  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+/*
+var disqus_config = function () {
+this.page.url = PAGE_URL;  // Replace PAGE_URL with your page's canonical URL variable
+this.page.identifier = PAGE_IDENTIFIER; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+};
+*/
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = '//macs-club.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+        </div>
+
+        <div id="footer">
+            Сайт создан с помощью
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+    </body>
+</html>

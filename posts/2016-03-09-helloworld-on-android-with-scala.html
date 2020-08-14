@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>MaCS-Club Blog - Hello, World! на Scala под Android</title>
+        <link rel="stylesheet" href="../css/default.css" />
+        <link rel="stylesheet" href="../css/syntax.css" />
+    </head>
+    <body>
+        <div id="header">
+            <div id="logo">
+                <a href="../">MaCS-Club</a>
+            </div>
+            <div id="navigation">
+                <a href="../">Главная</a>
+                <a href="../about.html">О нас</a>
+                <a href="../contact.html">Контакты</a>
+                <a href="../archive.html">Архив</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <h1>Hello, World! на Scala под Android</h1>
+            <div class="info">
+    Дата: March  9, 2016
+    
+        Автор: BeiZero
+    
+</div>
+<div class="info">
+    
+    Tags: <a href="../tags/scala.html">scala</a>, <a href="../tags/android.html">android</a>, <a href="../tags/scaloid.html">scaloid</a>
+    
+</div>
+
+<p>В данной статье я постараюсь рассказать о том как начать разрабатывать приложения под Android используя Scala и SBT. Предполагается что у вас уже установлены Android SDK и SBT. <!--more--> Первое что нам нужно сделать это указать переменную окружения ANDROID_HOME. На OS X с Android SDK установленным через Homebrew для этого нужно выполнить команду:</p>
+<pre class="shellsession"><code>export ANDROID_HOME=/usr/local/Cellar/android-sdk/{sdk-version}</code></pre>
+<p>Не забудьте запустить Android SDK Manager и установить все нужные вам пакеты. Для сборки проекта мы будем использовать SBT(в данный момент у меня стоит версия 0.13.11) с плагином android-sdk-plugin. В директории будущего проекта создадим файл</p>
+<pre><code>/project/plugins.sbt</code></pre>
+<p>со следующим содержимым</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb3-1"><a href="#cb3-1"></a><span class="fu">addSbtPlugin</span>(<span class="st">&quot;com.hanhuy.sbt&quot;</span> % <span class="st">&quot;android-sdk-plugin&quot;</span> % <span class="st">&quot;1.5.19&quot;</span>)</span></code></pre></div>
+<p>запустим sbt из директории с проектом и выполним следующую команду</p>
+<pre><code>gen-android android-23 org.my_company project_name</code></pre>
+<p>первый аргумент здесь platform-target(23 соответствует версии Android 6.0 Marshmallow), второй package-name, третий project-name, а так же укажем в build.sbt версию Scala(нам понадобится версия 2.11.5 или новее) добавив строку</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb5-1"><a href="#cb5-1"></a>scalaVersion := <span class="st">&quot;2.11.8&quot;</span></span></code></pre></div>
+<p>После этого мы уже можем собрать наш проект и посмотреть что же получилось командой</p>
+<pre><code>sbt android:package</code></pre>
+<p>К сожалению иногда proguard не запускается, возможно из-за отсутствия “существенных” изменений в проекте, и когда вы набираете достаточное количество кода и зависимостей в своём проекте компилятор начинает иногда выдавать ошибку вида</p>
+<pre><code>trouble writing output: Too many method references: 94505; max is 65536.</code></pre>
+<p>один из вариантов решения проблемы это запускать сборку проекта предварительно его “очистив”</p>
+<pre><code>sbt clean &amp;&amp; sbt android:package</code></pre>
+<p>Самое время сделать наш код немного лучше. Откроем файл</p>
+<pre><code>/src/main/scala/org/my_company/sample.scala</code></pre>
+<p>тем кто уже знаком с разработкой под Android на Java данный код будет более чем знаком и в этом заключается основаная проблема — стандартная библиотека Android не предназначена для написания программ на Scala и код остаётся всё таким же громоздким, но к счастью есть замечательная библиотека scaloid! Добавим эту библиотеку в зависимости к нашему проекту и в исключения к proguard(странно, но без этого компиляция фейлится), для этого в build.sbt добавим следующие строчки</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb10-1"><a href="#cb10-1"></a>libraryDependencies += <span class="st">&quot;org.scaloid&quot;</span> %% <span class="st">&quot;scaloid&quot;</span> % <span class="st">&quot;4.2&quot;</span></span>
+<span id="cb10-2"><a href="#cb10-2"></a></span>
+<span id="cb10-3"><a href="#cb10-3"></a>proguardOptions in Android ++= Seq(<span class="st">&quot;-dontwarn org.scaloid.**&quot;</span>)</span></code></pre></div>
+<p>теперь перепишем наш файл sample.scala используя scaloid</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb11-1"><a href="#cb11-1"></a><span class="kw">package</span> org.<span class="fu">my_company</span></span>
+<span id="cb11-2"><a href="#cb11-2"></a></span>
+<span id="cb11-3"><a href="#cb11-3"></a><span class="kw">import</span> org.<span class="fu">scaloid</span>.<span class="fu">common</span>._</span>
+<span id="cb11-4"><a href="#cb11-4"></a></span>
+<span id="cb11-5"><a href="#cb11-5"></a><span class="kw">class</span> MainActivity <span class="kw">extends</span> SActivity {</span>
+<span id="cb11-6"><a href="#cb11-6"></a></span>
+<span id="cb11-7"><a href="#cb11-7"></a>   onCreate {</span>
+<span id="cb11-8"><a href="#cb11-8"></a></span>
+<span id="cb11-9"><a href="#cb11-9"></a>      contentView = <span class="kw">new</span> SVerticalLayout {</span>
+<span id="cb11-10"><a href="#cb11-10"></a></span>
+<span id="cb11-11"><a href="#cb11-11"></a>         <span class="fu">SButton</span>(<span class="st">&quot;Say Hello&quot;</span>, <span class="fu">toast</span>(<span class="st">&quot;Hello, World!&quot;</span>))</span>
+<span id="cb11-12"><a href="#cb11-12"></a></span>
+<span id="cb11-13"><a href="#cb11-13"></a>      }</span>
+<span id="cb11-14"><a href="#cb11-14"></a></span>
+<span id="cb11-15"><a href="#cb11-15"></a>   }</span>
+<span id="cb11-16"><a href="#cb11-16"></a></span>
+<span id="cb11-17"><a href="#cb11-17"></a>}</span></code></pre></div>
+<p>На этом всё, можем собрать наш проект, запустить, нажать кнопку “Say Hello” и увидим заветные два слова.</p>
+
+<div id="socialButtons">
+  <script type="text/javascript" src="//yastatic.net/es5-shims/0.0.2/es5-shims.min.js" charset="utf-8"></script>
+  <script type="text/javascript" src="//yastatic.net/share2/share.js" charset="utf-8"></script>
+  <div class="ya-share2" data-services="vkontakte,facebook,linkedin,gplus,twitter,blogger,reddit,evernote,lj,pocket" data-counter></div>
+</div>
+
+<div id="disqus_thread"></div>
+<script>
+
+/**
+*  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+*  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+/*
+var disqus_config = function () {
+this.page.url = PAGE_URL;  // Replace PAGE_URL with your page's canonical URL variable
+this.page.identifier = PAGE_IDENTIFIER; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+};
+*/
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = '//macs-club.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+        </div>
+
+        <div id="footer">
+            Сайт создан с помощью
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+    </body>
+</html>

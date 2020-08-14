@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>MaCS-Club Blog - Scalaz для ежедневного использования. Часть 2. Монадные трансформеры и монада Reader.</title>
+        <link rel="stylesheet" href="../css/default.css" />
+        <link rel="stylesheet" href="../css/syntax.css" />
+    </head>
+    <body>
+        <div id="header">
+            <div id="logo">
+                <a href="../">MaCS-Club</a>
+            </div>
+            <div id="navigation">
+                <a href="../">Главная</a>
+                <a href="../about.html">О нас</a>
+                <a href="../contact.html">Контакты</a>
+                <a href="../archive.html">Архив</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <h1>Scalaz для ежедневного использования. Часть 2. Монадные трансформеры и монада Reader.</h1>
+            <div class="info">
+    Дата: June 17, 2016
+    
+        Автор: jos.dirksen (перевод BeiZero)
+    
+</div>
+<div class="info">
+    
+    Tags: <a href="../tags/scala.html">scala</a>, <a href="../tags/scalaz%20%D0%B4%D0%BB%D1%8F%20%D0%B5%D0%B6%D0%B5%D0%B4%D0%BD%D0%B5%D0%B2%D0%BD%D0%BE%D0%B3%D0%BE%20%D0%B8%D1%81%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%8F.html">scalaz для ежедневного использования</a>, <a href="../tags/scalaz.html">scalaz</a>, <a href="../tags/%D0%BF%D0%B5%D1%80%D0%B5%D0%B2%D0%BE%D0%B4.html">перевод</a>
+    
+</div>
+
+<p>Во второй статье “Scalaz для ежедневного использования” мы рассмотрим монадные трансформеры и монаду Reader. Начнём с монадных трансформеров. Они пригодятся когда вам нужно иметь дело с вложенными монадами, что происходит удивительно часто. Например, когда вам нужно работать с вложенными Future[Option] или Future[Either], ваши for-генераторы довольно быстро могут стать не читаемыми, так как вам нужно обрабатывать None и Some для Option, а так же Success и Failure для Future явно.</p>
+<!--more-->
+<h3 id="работаем-без-монадных-трансформеров">Работаем без монадных трансформеров</h3>
+<p>Как мы уже говорили во введении монадные трансформеры полезны при работе с вложенными монадами. Когда вы можете с ними столкнуться? Например, библиотеки для работы с базами данных обычно ассинхронные(используют Future) и в некоторых случаях возвращают Option. Предположим, вы запрашиваете специальную запись которая возвращает Future[Option[T]]:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb1-1"><a href="#cb1-1"></a># Phantom драйвер для <span class="fu">cassandra</span> (без implicits) возвращает Some(Record) если запись найдена</span>
+<span id="cb1-2"><a href="#cb1-2"></a># или None иначе</span>
+<span id="cb1-3"><a href="#cb1-3"></a><span class="kw">def</span> <span class="fu">one</span>(): Future[Option[Record]]</span>
+<span id="cb1-4"><a href="#cb1-4"></a></span>
+<span id="cb1-5"><a href="#cb1-5"></a># или вы можете захотеть получить первый элемент из запроса Slick</span>
+<span id="cb1-6"><a href="#cb1-6"></a><span class="kw">val</span> res : Future[Option[Row]] = db.<span class="fu">run</span>(<span class="fu">filterQuery</span>(id).<span class="fu">result</span>.<span class="fu">headOption</span>)</span></code></pre></div>
+<p>Или вы можете просто иметь свой сервис, определяющий функции, которые возвращают Either или Option как результат:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb2-1"><a href="#cb2-1"></a># возвращает аккаунт или None если аккаунт не найден</span>
+<span id="cb2-2"><a href="#cb2-2"></a><span class="kw">def</span> <span class="fu">getAccount</span>() : Future[Option[Account]]</span>
+<span id="cb2-3"><a href="#cb2-3"></a></span>
+<span id="cb2-4"><a href="#cb2-4"></a># снимает сумму со счёта, возвращает новую сумму на счёте</span>
+<span id="cb2-5"><a href="#cb2-5"></a># или сообщение объясняющее что пошло не так</span>
+<span id="cb2-6"><a href="#cb2-6"></a><span class="kw">def</span> <span class="fu">withdraw</span>(account: Account, amount: Amount) : Future[\/[String, Amount]]</span></code></pre></div>
+<p>Давайте рассмотрим пример некрасивого кода который может получиться если не использовать монадные трансформеры:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb3-1"><a href="#cb3-1"></a> <span class="kw">def</span> <span class="fu">withdrawWithoutMonadTransformers</span>(accountNumber: String, amount: Amount) : Future[Option[Statement]] = {</span>
+<span id="cb3-2"><a href="#cb3-2"></a>  <span class="kw">for</span> {</span>
+<span id="cb3-3"><a href="#cb3-3"></a>    <span class="co">// возвращает Future[Option[Account]]</span></span>
+<span id="cb3-4"><a href="#cb3-4"></a>    account &lt;- Accounts.<span class="fu">getAccount</span>(accountNumber)</span>
+<span id="cb3-5"><a href="#cb3-5"></a>    <span class="co">// мы можем сделать свёртку, используя функцию из scalaz для получения &quot;нетипизированного&quot; None</span></span>
+<span id="cb3-6"><a href="#cb3-6"></a>    balance &lt;- account.<span class="fu">fold</span>(Future(none[Amount]))(Accounts.<span class="fu">getBalance</span>(_))</span>
+<span id="cb3-7"><a href="#cb3-7"></a>    <span class="co">// или иногда нам нужно использовать сопоставление с образцом</span></span>
+<span id="cb3-8"><a href="#cb3-8"></a>    _ &lt;- (account, balance) <span class="kw">match</span> {</span>
+<span id="cb3-9"><a href="#cb3-9"></a>      <span class="kw">case</span> (Some(acc), Some(bal)) =&gt; Future(Accounts.<span class="fu">withdraw</span>(acc,bal))</span>
+<span id="cb3-10"><a href="#cb3-10"></a>      <span class="kw">case</span> _ =&gt; Future(None)</span>
+<span id="cb3-11"><a href="#cb3-11"></a>    }</span>
+<span id="cb3-12"><a href="#cb3-12"></a>    <span class="co">// или мы можем сделать вложенный map</span></span>
+<span id="cb3-13"><a href="#cb3-13"></a>    statement &lt;- Future(account.<span class="fu">map</span>(Accounts.<span class="fu">getStatement</span>(_)))</span>
+<span id="cb3-14"><a href="#cb3-14"></a>  } <span class="kw">yield</span> statement</span>
+<span id="cb3-15"><a href="#cb3-15"></a>}</span></code></pre></div>
+<p>Как мы видим, когда нам нужно работать с вложенными монадами, приходится обрабатывать внутренние монады пошагово в правой части for-генератора. Scala очень богатый язык, поэтому у нас есть много способов сделать это, но код не получается более читаемым. Мы вынуждены прибегать к вложенным map и flatmap, использовать fold(в случае Option) или прибегать к помощи сопоставления с образцом, если нас интересует несколько Option. Есть, вероятно, и другие способы сделать это, но код врядли станет заметно лучше. Так как мы имеем дело с Option в явном виде.</p>
+<h3 id="а-теперь-с-монадными-трансформерами">А теперь с монадными трансформерами</h3>
+<p>С монадными трансформерами мы можем удалить из кода всё лишнее и получить удобный инструмент для работы с подобными вложенными конструкциями. Scalaz предоставляет монадные трансформеры следующих типов:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb4-1"><a href="#cb4-1"></a>BijectionT</span>
+<span id="cb4-2"><a href="#cb4-2"></a>EitherT</span>
+<span id="cb4-3"><a href="#cb4-3"></a>IdT</span>
+<span id="cb4-4"><a href="#cb4-4"></a>IndexedContsT</span>
+<span id="cb4-5"><a href="#cb4-5"></a>LazyEitherT</span>
+<span id="cb4-6"><a href="#cb4-6"></a>LazyOptionT</span>
+<span id="cb4-7"><a href="#cb4-7"></a>ListT</span>
+<span id="cb4-8"><a href="#cb4-8"></a>MaybeT</span>
+<span id="cb4-9"><a href="#cb4-9"></a>OptionT</span>
+<span id="cb4-10"><a href="#cb4-10"></a>ReaderWriterStateT</span>
+<span id="cb4-11"><a href="#cb4-11"></a>ReaderT</span>
+<span id="cb4-12"><a href="#cb4-12"></a>StateT</span>
+<span id="cb4-13"><a href="#cb4-13"></a>StoreT</span>
+<span id="cb4-14"><a href="#cb4-14"></a>StreamT</span>
+<span id="cb4-15"><a href="#cb4-15"></a>UnWriterT</span>
+<span id="cb4-16"><a href="#cb4-16"></a>WriterT</span></code></pre></div>
+<p>В то время как некоторые из них могут показаться немного экзотичными, ListT, OptionT, EitherT, ReaderT и WriterT имеют очень много вариантов использования. В первом примере мы сосредоточимся на монадном трансформере OptionT. Давайте посмотрим как мы можем создать монаду OptionT. В нашем случае нужно создать OptionT[Future, A], который упаковывает Option[A] внутрь Future. Мы можем создать его из A:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb5-1"><a href="#cb5-1"></a>scala&gt; :require /Users/jos/.<span class="fu">ivy2</span>/cache/org.<span class="fu">scalaz</span>/scalaz-core_<span class="fl">2.11</span>/bundles/scalaz-core_<span class="fl">2.11</span><span class="dv">-7</span>.<span class="dv">2</span>.<span class="fl">1.</span>jar</span>
+<span id="cb5-2"><a href="#cb5-2"></a>Added '/Users/jos/.<span class="fu">ivy2</span>/cache/org.<span class="fu">scalaz</span>/scalaz-core_<span class="fl">2.11</span>/bundles/scalaz-core_<span class="fl">2.11</span><span class="dv">-7</span>.<span class="dv">2</span>.<span class="fl">1.</span>jar' to classpath.</span>
+<span id="cb5-3"><a href="#cb5-3"></a></span>
+<span id="cb5-4"><a href="#cb5-4"></a>scala&gt; <span class="kw">import</span> scalaz._</span>
+<span id="cb5-5"><a href="#cb5-5"></a><span class="kw">import</span> scalaz._</span>
+<span id="cb5-6"><a href="#cb5-6"></a></span>
+<span id="cb5-7"><a href="#cb5-7"></a>scala&gt; <span class="kw">import</span> Scalaz._</span>
+<span id="cb5-8"><a href="#cb5-8"></a><span class="kw">import</span> Scalaz._                                ^</span>
+<span id="cb5-9"><a href="#cb5-9"></a></span>
+<span id="cb5-10"><a href="#cb5-10"></a>scala&gt; <span class="kw">import</span> scala.<span class="fu">concurrent</span>.<span class="fu">Future</span></span>
+<span id="cb5-11"><a href="#cb5-11"></a><span class="kw">import</span> scala.<span class="fu">concurrent</span>.<span class="fu">Future</span></span>
+<span id="cb5-12"><a href="#cb5-12"></a></span>
+<span id="cb5-13"><a href="#cb5-13"></a>scala&gt; <span class="kw">import</span> scala.<span class="fu">concurrent</span>.<span class="fu">ExecutionContext</span>.<span class="fu">Implicits</span>.<span class="fu">global</span></span>
+<span id="cb5-14"><a href="#cb5-14"></a><span class="kw">import</span> scala.<span class="fu">concurrent</span>.<span class="fu">ExecutionContext</span>.<span class="fu">Implicits</span>.<span class="fu">global</span></span>
+<span id="cb5-15"><a href="#cb5-15"></a></span>
+<span id="cb5-16"><a href="#cb5-16"></a>scala&gt; <span class="kw">type</span> Result[A] = OptionT[Future, A]</span>
+<span id="cb5-17"><a href="#cb5-17"></a>defined <span class="kw">type</span> alias Result</span>
+<span id="cb5-18"><a href="#cb5-18"></a></span>
+<span id="cb5-19"><a href="#cb5-19"></a>scala&gt; <span class="fl">1234.</span>point[Result]</span>
+<span id="cb5-20"><a href="#cb5-20"></a>res1: Result[Int] = <span class="fu">OptionT</span>(scala.<span class="fu">concurrent</span>.<span class="fu">impl</span>.<span class="fu">Promise</span>$DefaultPromise@1c6ab85)</span>
+<span id="cb5-21"><a href="#cb5-21"></a></span>
+<span id="cb5-22"><a href="#cb5-22"></a>scala&gt; <span class="st">&quot;hello&quot;</span>.<span class="fu">point</span>[Result]</span>
+<span id="cb5-23"><a href="#cb5-23"></a>res2: Result[String] = <span class="fu">OptionT</span>(scala.<span class="fu">concurrent</span>.<span class="fu">impl</span>.<span class="fu">Promise</span>$DefaultPromise@<span class="fl">3e17219</span>)</span>
+<span id="cb5-24"><a href="#cb5-24"></a></span>
+<span id="cb5-25"><a href="#cb5-25"></a>scala&gt; res1.<span class="fu">run</span></span>
+<span id="cb5-26"><a href="#cb5-26"></a>res4: scala.<span class="fu">concurrent</span>.<span class="fu">Future</span>[Option[Int]] = scala.<span class="fu">concurrent</span>.<span class="fu">impl</span>.<span class="fu">Promise</span>$DefaultPromise@1c6ab85</span></code></pre></div>
+<p>Обратите внимание что мы явно определяем тип Result для того, чтобы функция point работала. Если вы этого не сделаете вы получите сообщение об ошибке:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb6-1"><a href="#cb6-1"></a>scala&gt; <span class="st">&quot;why&quot;</span>.<span class="fu">point</span>[OptionT[Future, String]]</span>
+<span id="cb6-2"><a href="#cb6-2"></a>&lt;console&gt;:<span class="dv">16</span>: error: scalaz.<span class="fu">OptionT</span>[scala.<span class="fu">concurrent</span>.<span class="fu">Future</span>,String] takes no <span class="kw">type</span> parameters, expected: one</span>
+<span id="cb6-3"><a href="#cb6-3"></a>              <span class="st">&quot;why&quot;</span>.<span class="fu">point</span>[OptionT[Future, String]]</span></code></pre></div>
+<p>Вы можете использовать point только тогда, когда вы имеете дело с внутренним значением монадного трансформера. Если у вас уже есть Future или Option, придётся использовать конструктор OptionT.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb7-1"><a href="#cb7-1"></a>scala&gt; <span class="kw">val</span> p: Result[Int] = <span class="fu">OptionT</span>(Future.<span class="fu">successful</span>(<span class="fu">some</span>(<span class="dv">10</span>)))</span>
+<span id="cb7-2"><a href="#cb7-2"></a>p: Result[Int] = <span class="fu">OptionT</span>(scala.<span class="fu">concurrent</span>.<span class="fu">impl</span>.<span class="fu">Promise</span>$KeptPromise@40dde94)</span></code></pre></div>
+<p>С монадными трансформерами вы можете автоматически развернуть вложенную монаду. Теперь, когда мы знаем как преобразовать наши значения к OptionT, давайте посмотрим как можно переписать предыдущий пример:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb8-1"><a href="#cb8-1"></a><span class="kw">def</span> <span class="fu">withdrawWithMonadTransformers</span>(accountNumber: String, amount: Amount) : Future[Option[Statement]] = {</span>
+<span id="cb8-2"><a href="#cb8-2"></a></span>
+<span id="cb8-3"><a href="#cb8-3"></a>  <span class="kw">type</span> Result[A] = OptionT[Future, A]</span>
+<span id="cb8-4"><a href="#cb8-4"></a></span>
+<span id="cb8-5"><a href="#cb8-5"></a>  <span class="kw">val</span> result = <span class="kw">for</span> {</span>
+<span id="cb8-6"><a href="#cb8-6"></a>    account &lt;- <span class="fu">OptionT</span>(Accounts.<span class="fu">getAccount</span>(accountNumber))</span>
+<span id="cb8-7"><a href="#cb8-7"></a>    balance &lt;- <span class="fu">OptionT</span>(Accounts.<span class="fu">getBalance</span>(account))</span>
+<span id="cb8-8"><a href="#cb8-8"></a>    _ &lt;- <span class="fu">OptionT</span>(Accounts.<span class="fu">withdraw</span>(account,balance).<span class="fu">map</span>(<span class="fu">some</span>(_)))</span>
+<span id="cb8-9"><a href="#cb8-9"></a>    statement &lt;- Accounts.<span class="fu">getStatement</span>(account).<span class="fu">point</span>[Result]</span>
+<span id="cb8-10"><a href="#cb8-10"></a>  } <span class="kw">yield</span> statement</span>
+<span id="cb8-11"><a href="#cb8-11"></a></span>
+<span id="cb8-12"><a href="#cb8-12"></a>  result.<span class="fu">run</span></span>
+<span id="cb8-13"><a href="#cb8-13"></a>}</span></code></pre></div>
+<p>Неплохо правда? Вместо всей боли с приведением типов к корретным, мы просто создаём OptionT и возвращаем их. Для того чтобы получить сохранённое значение из OptionT мы просто вызываем run.</p>
+<p>Несмотря на то что код стал уже гораздо лучше, мы всё ещё имеем много шума связанного с созданием OptionT.</p>
+<h3 id="а-теперь-сделаем-наш-код-ещё-чище">А теперь сделаем наш код ещё чище</h3>
+<p>Мы можем очистить наш код ещё немного:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb9-1"><a href="#cb9-1"></a><span class="kw">type</span> Result[A] = OptionT[Future, A]</span>
+<span id="cb9-2"><a href="#cb9-2"></a></span>
+<span id="cb9-3"><a href="#cb9-3"></a><span class="kw">object</span> ResultLike {</span>
+<span id="cb9-4"><a href="#cb9-4"></a>  <span class="kw">def</span> applyFO[A](a: Future[Option[A]]) : Result[A] = <span class="fu">OptionT</span>(a)</span>
+<span id="cb9-5"><a href="#cb9-5"></a>  <span class="kw">def</span> applyF[A](a: Future[A]) : Result[A] = <span class="fu">OptionT</span>(a.<span class="fu">map</span>(<span class="fu">some</span>(_)))</span>
+<span id="cb9-6"><a href="#cb9-6"></a>  <span class="kw">def</span> applyP[A](a: A) : Result[A] = a.<span class="fu">point</span>[Result]</span>
+<span id="cb9-7"><a href="#cb9-7"></a>}</span>
+<span id="cb9-8"><a href="#cb9-8"></a></span>
+<span id="cb9-9"><a href="#cb9-9"></a><span class="kw">def</span> <span class="fu">withdrawClean</span>(accountNumber: String, amount: Amount) : Future[Option[Statement]] = {</span>
+<span id="cb9-10"><a href="#cb9-10"></a></span>
+<span id="cb9-11"><a href="#cb9-11"></a>  <span class="kw">val</span> result: Result[Statement] = <span class="kw">for</span> {</span>
+<span id="cb9-12"><a href="#cb9-12"></a>    account &lt;- Accounts.<span class="fu">getAccount</span>(accountNumber)         |&gt; ResultLike.<span class="fu">applyFO</span></span>
+<span id="cb9-13"><a href="#cb9-13"></a>    balance &lt;- Accounts.<span class="fu">getBalance</span>(account)               |&gt; ResultLike.<span class="fu">applyFO</span></span>
+<span id="cb9-14"><a href="#cb9-14"></a>    _ &lt;- Accounts.<span class="fu">withdraw</span>(account,balance)               |&gt; ResultLike.<span class="fu">applyF</span></span>
+<span id="cb9-15"><a href="#cb9-15"></a>    statement &lt;- Accounts.<span class="fu">getStatement</span>(account)           |&gt; ResultLike.<span class="fu">applyP</span></span>
+<span id="cb9-16"><a href="#cb9-16"></a>  } <span class="kw">yield</span> statement</span>
+<span id="cb9-17"><a href="#cb9-17"></a></span>
+<span id="cb9-18"><a href="#cb9-18"></a>  result.<span class="fu">run</span></span>
+<span id="cb9-19"><a href="#cb9-19"></a>}</span></code></pre></div>
+<p>При таком подходе мы просто создаём специальные конверторы, чтобы получить результат в монаде OptionT. В результате текущий for-генератор выглядит очень читаемо без какого-либо хлама. В правой части, не нагромождая “полезный” код, мы делаем преобразование в OptionT. Обратите внимание, что это не самое чистое решение так как нам приходится задавать разные apply функции. Перегрузка функций здесь не работает потому, что после стирания окончаний функции <code>applyFO</code> и <code>applyF</code> будут иметь одинаковую сигнатуру.</p>
+<h2 id="монада-reader">Монада Reader</h2>
+<p>Монада Reader одна из стандартных монад предоставляемых Scalaz. Монада Reader может быть использована для того чтобы выносить конфигурацию(или другие значения) и для таких вещей как инъекция зависимостей.</p>
+<h3 id="решение-с-монадой-reader">Решение с монадой Reader</h3>
+<p>Монада Reader позволяет делать инъекцию зависимостей в Scala. Независимо от того, является ли зависимость объектом конфигурации или ссылкой на какой-либо другой сервис. Мы начнём с примера который лучше всего объясняет как использовать монаду Reader.</p>
+<p>Для этого примера предположим что у нас есть сервис, который требует Session, чтобы делать что-либо. Это может быть, например, сессия базы данных или что-то другое. Давайте в качестве примера возьмём код из предыдущего примера и немного его упростим убрав Future:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb10-1"><a href="#cb10-1"></a><span class="kw">trait</span> AccountService {</span>
+<span id="cb10-2"><a href="#cb10-2"></a>  <span class="kw">def</span> <span class="fu">getAccount</span>(accountNumber: String, session: Session) : Option[Account]</span>
+<span id="cb10-3"><a href="#cb10-3"></a>  <span class="kw">def</span> <span class="fu">getBalance</span>(account: Account, session: Session) : Option[Amount]</span>
+<span id="cb10-4"><a href="#cb10-4"></a>  <span class="kw">def</span> <span class="fu">withdraw</span>(account: Account, amount: Amount, session: Session) : Amount</span>
+<span id="cb10-5"><a href="#cb10-5"></a>  <span class="kw">def</span> <span class="fu">getStatement</span>(account: Account, session: Session): Statement</span>
+<span id="cb10-6"><a href="#cb10-6"></a>}</span>
+<span id="cb10-7"><a href="#cb10-7"></a></span>
+<span id="cb10-8"><a href="#cb10-8"></a><span class="kw">object</span> Accounts <span class="kw">extends</span> AccountService {</span>
+<span id="cb10-9"><a href="#cb10-9"></a>  <span class="kw">override</span> <span class="kw">def</span> <span class="fu">getAccount</span>(accountNumber: String, session: Session): Option[Account] = ???</span>
+<span id="cb10-10"><a href="#cb10-10"></a>  <span class="kw">override</span> <span class="kw">def</span> <span class="fu">getBalance</span>(account: Account, session: Session): Option[Amount] = ???</span>
+<span id="cb10-11"><a href="#cb10-11"></a>  <span class="kw">override</span> <span class="kw">def</span> <span class="fu">withdraw</span>(account: Account, amount: Amount, session: Session): Amount = ???</span>
+<span id="cb10-12"><a href="#cb10-12"></a>  <span class="kw">override</span> <span class="kw">def</span> <span class="fu">getStatement</span>(account: Account, session: Session): Statement = ???</span>
+<span id="cb10-13"><a href="#cb10-13"></a>}</span></code></pre></div>
+<p>Это немного раздражает, так как каждый раз, когда мы хотим вызвать один из сервисов, мы должны предоставить реализацию Session. Мы могли бы, конечно, сделать Session implicit’ом, но тогда нам нужно убедиться, что он находится в нашей области видимости, перед тем как вызывать функции этой службы. Было бы круто если бы мы могли внедрить эту сессию каким-нибудь образом. Мы могли бы, конечно, сделать это в конструкторе сервиса, но мы можем так же использовать монаду Reader для этого:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb11-1"><a href="#cb11-1"></a><span class="co">// введение в тип Action. Он представляет из себя действие которое наш сервис может выполнить.</span></span>
+<span id="cb11-2"><a href="#cb11-2"></a><span class="co">// Как вы видите Action требует Session.</span></span>
+<span id="cb11-3"><a href="#cb11-3"></a><span class="kw">type</span> Action[A] = Reader[Session, A]</span>
+<span id="cb11-4"><a href="#cb11-4"></a></span>
+<span id="cb11-5"><a href="#cb11-5"></a><span class="kw">trait</span> AccountService {</span>
+<span id="cb11-6"><a href="#cb11-6"></a>  <span class="co">// возвращает аккаунт или None, когда аккаунт не найден</span></span>
+<span id="cb11-7"><a href="#cb11-7"></a>  <span class="kw">def</span> <span class="fu">getAccount</span>(accountNumber: String) : Action[Option[Account]]</span>
+<span id="cb11-8"><a href="#cb11-8"></a>  <span class="co">// возвращает баланс если аккаунт открыт или None иначе</span></span>
+<span id="cb11-9"><a href="#cb11-9"></a>  <span class="kw">def</span> <span class="fu">getBalance</span>(account: Account) :Action[Option[Amount]]</span>
+<span id="cb11-10"><a href="#cb11-10"></a>  <span class="co">// снять сумму со счета, и вернуть новое значение</span></span>
+<span id="cb11-11"><a href="#cb11-11"></a>  <span class="kw">def</span> <span class="fu">withdraw</span>(account: Account, amount: Amount) : Action[Amount]</span>
+<span id="cb11-12"><a href="#cb11-12"></a>  <span class="co">// мы можем также получить обзор выписки со счета</span></span>
+<span id="cb11-13"><a href="#cb11-13"></a>  <span class="kw">def</span> <span class="fu">getStatement</span>(account: Account): Action[Statement]</span>
+<span id="cb11-14"><a href="#cb11-14"></a>}</span>
+<span id="cb11-15"><a href="#cb11-15"></a></span>
+<span id="cb11-16"><a href="#cb11-16"></a><span class="kw">object</span> Accounts <span class="kw">extends</span> AccountService {</span>
+<span id="cb11-17"><a href="#cb11-17"></a>  <span class="kw">override</span> <span class="kw">def</span> <span class="fu">getAccount</span>(accountNumber: String): Action[Option[Account]] = Reader((session: Session) =&gt; {</span>
+<span id="cb11-18"><a href="#cb11-18"></a>    <span class="co">// сделать что-нибудь с сессией здесь и вернуть результат</span></span>
+<span id="cb11-19"><a href="#cb11-19"></a>    session.<span class="fu">doSomething</span></span>
+<span id="cb11-20"><a href="#cb11-20"></a>    <span class="fu">some</span>(<span class="fu">Account</span>())</span>
+<span id="cb11-21"><a href="#cb11-21"></a>  })</span>
+<span id="cb11-22"><a href="#cb11-22"></a></span>
+<span id="cb11-23"><a href="#cb11-23"></a>  <span class="kw">override</span> <span class="kw">def</span> <span class="fu">getBalance</span>(account: Account): Action[Option[Amount]] = Reader((session: Session) =&gt; {</span>
+<span id="cb11-24"><a href="#cb11-24"></a>    <span class="co">// сделать что-нибудь с сессией здесь и вернуть результат</span></span>
+<span id="cb11-25"><a href="#cb11-25"></a>    session.<span class="fu">doSomething</span></span>
+<span id="cb11-26"><a href="#cb11-26"></a>    <span class="fu">some</span>(<span class="fu">Amount</span>(<span class="dv">10</span>,<span class="st">&quot;Dollar&quot;</span>))</span>
+<span id="cb11-27"><a href="#cb11-27"></a>  })</span>
+<span id="cb11-28"><a href="#cb11-28"></a></span>
+<span id="cb11-29"><a href="#cb11-29"></a>  <span class="kw">override</span> <span class="kw">def</span> <span class="fu">withdraw</span>(account: Account, amount: Amount): Action[Amount] = Reader((session: Session) =&gt; {</span>
+<span id="cb11-30"><a href="#cb11-30"></a>    <span class="co">// сделать что-нибудь с сессией здесь и вернуть результат</span></span>
+<span id="cb11-31"><a href="#cb11-31"></a>    session.<span class="fu">doSomething</span></span>
+<span id="cb11-32"><a href="#cb11-32"></a>    <span class="fu">Amount</span>(<span class="dv">5</span>, <span class="st">&quot;Dollar&quot;</span>)</span>
+<span id="cb11-33"><a href="#cb11-33"></a>  })</span>
+<span id="cb11-34"><a href="#cb11-34"></a></span>
+<span id="cb11-35"><a href="#cb11-35"></a>  <span class="kw">override</span> <span class="kw">def</span> <span class="fu">getStatement</span>(account: Account): Action[Statement] = Reader((session: Session) =&gt; {</span>
+<span id="cb11-36"><a href="#cb11-36"></a>    <span class="co">// сделать что-нибудь с сессией здесь и вернуть результат</span></span>
+<span id="cb11-37"><a href="#cb11-37"></a>    session.<span class="fu">doSomething</span></span>
+<span id="cb11-38"><a href="#cb11-38"></a>    Statement(account)</span>
+<span id="cb11-39"><a href="#cb11-39"></a>  })</span>
+<span id="cb11-40"><a href="#cb11-40"></a>}</span></code></pre></div>
+<p>Как вы можете видеть, мы не возвращаем результат, но оборачиваем его в Reader. Самое замечательное в том, что теперь мы можем начать обрабатывать результат, так как Reader это просто монада.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb12-1"><a href="#cb12-1"></a><span class="kw">def</span> <span class="fu">withdrawWithReader</span>(accountNumber: String) = {</span>
+<span id="cb12-2"><a href="#cb12-2"></a></span>
+<span id="cb12-3"><a href="#cb12-3"></a>  <span class="kw">for</span> {</span>
+<span id="cb12-4"><a href="#cb12-4"></a>    account &lt;- Accounts.<span class="fu">getAccount</span>(accountNumber)</span>
+<span id="cb12-5"><a href="#cb12-5"></a>    balance &lt;- account.<span class="fu">fold</span>(Reader((session: Session) =&gt; none[Amount]))(ac =&gt; Accounts.<span class="fu">getBalance</span>(ac))</span>
+<span id="cb12-6"><a href="#cb12-6"></a>    _ &lt;- (account, balance) <span class="kw">match</span> {</span>
+<span id="cb12-7"><a href="#cb12-7"></a>      <span class="kw">case</span> (Some(acc), Some(bal)) =&gt; Accounts.<span class="fu">withdraw</span>(acc,bal)</span>
+<span id="cb12-8"><a href="#cb12-8"></a>      <span class="kw">case</span> _ =&gt; Reader((session: Session) =&gt; none[Amount])</span>
+<span id="cb12-9"><a href="#cb12-9"></a>    }</span>
+<span id="cb12-10"><a href="#cb12-10"></a>  statement &lt;- account <span class="kw">match</span> { <span class="kw">case</span> Some(acc) =&gt; Accounts.<span class="fu">getStatement</span>(acc)}</span>
+<span id="cb12-11"><a href="#cb12-11"></a>  } <span class="kw">yield</span> statement</span>
+<span id="cb12-12"><a href="#cb12-12"></a>}</span></code></pre></div>
+<p>Данный код не вернёт нам фактическое конечное значение, но вернёт Reader. Теперь мы можем запустить код передав Session:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb13-1"><a href="#cb13-1"></a><span class="co">// функция возвращает 'шаги' для выполнения, чтобы выполнить эти шаги, нужно запустить run в контексте 'новой сессии'</span></span>
+<span id="cb13-2"><a href="#cb13-2"></a><span class="fu">withdrawWithReader</span>(<span class="st">&quot;1234&quot;</span>).<span class="fu">run</span>(<span class="kw">new</span> <span class="fu">Session</span>())</span></code></pre></div>
+<p>Когда вы вновь посмотрите на withdrawWithReader вы увидите, что мы вновь должны работать с монадой Option в явном виде и убедиться, что мы всегда создаём Reader в качестве результата. К счастью, Scalaz предоставляет ReaderT. В следующем коде мы покажем, как это делается на примере:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb14-1"><a href="#cb14-1"></a><span class="co">// введение в тип Action. Он представляет из себя действие которое наш сервис может выполнить.</span></span>
+<span id="cb14-2"><a href="#cb14-2"></a><span class="co">// Как вы видите Action требует Session.</span></span>
+<span id="cb14-3"><a href="#cb14-3"></a><span class="kw">type</span> Action[A] = ReaderT[Session, A]</span>
+<span id="cb14-4"><a href="#cb14-4"></a></span>
+<span id="cb14-5"><a href="#cb14-5"></a><span class="kw">trait</span> AccountService {</span>
+<span id="cb14-6"><a href="#cb14-6"></a>  <span class="co">// возвращает аккаунт или None, когда аккаунт не найден</span></span>
+<span id="cb14-7"><a href="#cb14-7"></a>  <span class="kw">def</span> <span class="fu">getAccount</span>(accountNumber: String) : Action[Option[Account]]</span>
+<span id="cb14-8"><a href="#cb14-8"></a>  <span class="co">// возвращает баланс если аккаунт открыт или None иначе</span></span>
+<span id="cb14-9"><a href="#cb14-9"></a>  <span class="kw">def</span> <span class="fu">getBalance</span>(account: Account) :Action[Option[Amount]]</span>
+<span id="cb14-10"><a href="#cb14-10"></a>  <span class="co">// снять сумму со счета, и вернуть новое значение</span></span>
+<span id="cb14-11"><a href="#cb14-11"></a>  <span class="kw">def</span> <span class="fu">withdraw</span>(account: Account, amount: Amount) : Action[Amount]</span>
+<span id="cb14-12"><a href="#cb14-12"></a>  <span class="co">// мы можем также получить обзор выписки со счета</span></span>
+<span id="cb14-13"><a href="#cb14-13"></a>  <span class="kw">def</span> <span class="fu">getStatement</span>(account: Account): Action[Statement]</span>
+<span id="cb14-14"><a href="#cb14-14"></a>}</span>
+<span id="cb14-15"><a href="#cb14-15"></a></span>
+<span id="cb14-16"><a href="#cb14-16"></a><span class="kw">object</span> Accounts <span class="kw">extends</span> AccountService {</span>
+<span id="cb14-17"><a href="#cb14-17"></a>  <span class="kw">override</span> <span class="kw">def</span> <span class="fu">getAccount</span>(accountNumber: String): Action[Option[Account]] = Reader((session: Session) =&gt; {</span>
+<span id="cb14-18"><a href="#cb14-18"></a>    <span class="co">// сделать что-нибудь с сессией здесь и вернуть результат</span></span>
+<span id="cb14-19"><a href="#cb14-19"></a>    session.<span class="fu">doSomething</span></span>
+<span id="cb14-20"><a href="#cb14-20"></a>    <span class="fu">some</span>(<span class="fu">Account</span>())</span>
+<span id="cb14-21"><a href="#cb14-21"></a>  })</span>
+<span id="cb14-22"><a href="#cb14-22"></a></span>
+<span id="cb14-23"><a href="#cb14-23"></a>  <span class="kw">override</span> <span class="kw">def</span> <span class="fu">getBalance</span>(account: Account): Action[Option[Amount]] = Reader((session: Session) =&gt; {</span>
+<span id="cb14-24"><a href="#cb14-24"></a>    <span class="co">// сделать что-нибудь с сессией здесь и вернуть результат</span></span>
+<span id="cb14-25"><a href="#cb14-25"></a>    session.<span class="fu">doSomething</span></span>
+<span id="cb14-26"><a href="#cb14-26"></a>    <span class="fu">some</span>(<span class="fu">Amount</span>(<span class="dv">10</span>,<span class="st">&quot;Dollar&quot;</span>))</span>
+<span id="cb14-27"><a href="#cb14-27"></a>  })</span>
+<span id="cb14-28"><a href="#cb14-28"></a></span>
+<span id="cb14-29"><a href="#cb14-29"></a>  <span class="kw">override</span> <span class="kw">def</span> <span class="fu">withdraw</span>(account: Account, amount: Amount): Action[Amount] = Reader((session: Session) =&gt; {</span>
+<span id="cb14-30"><a href="#cb14-30"></a>    <span class="co">// сделать что-нибудь с сессией здесь и вернуть результат</span></span>
+<span id="cb14-31"><a href="#cb14-31"></a>    session.<span class="fu">doSomething</span></span>
+<span id="cb14-32"><a href="#cb14-32"></a>    <span class="fu">Amount</span>(<span class="dv">5</span>, <span class="st">&quot;Dollar&quot;</span>)</span>
+<span id="cb14-33"><a href="#cb14-33"></a>  })</span>
+<span id="cb14-34"><a href="#cb14-34"></a></span>
+<span id="cb14-35"><a href="#cb14-35"></a>  <span class="kw">override</span> <span class="kw">def</span> <span class="fu">getStatement</span>(account: Account): Action[Statement] = Reader((session: Session) =&gt; {</span>
+<span id="cb14-36"><a href="#cb14-36"></a>    <span class="co">// сделать что-нибудь с сессией здесь и вернуть результат</span></span>
+<span id="cb14-37"><a href="#cb14-37"></a>    session.<span class="fu">doSomething</span></span>
+<span id="cb14-38"><a href="#cb14-38"></a>    Statement(account)</span>
+<span id="cb14-39"><a href="#cb14-39"></a>  })</span>
+<span id="cb14-40"><a href="#cb14-40"></a>}</span>
+<span id="cb14-41"><a href="#cb14-41"></a></span>
+<span id="cb14-42"><a href="#cb14-42"></a><span class="kw">def</span> <span class="fu">withdrawWithReaderT</span>(accountNumber: String) = {</span>
+<span id="cb14-43"><a href="#cb14-43"></a>  <span class="kw">for</span> {</span>
+<span id="cb14-44"><a href="#cb14-44"></a>    account &lt;- Accounts.<span class="fu">getAccount</span>(accountNumber)</span>
+<span id="cb14-45"><a href="#cb14-45"></a>    balance &lt;- Accounts.<span class="fu">getBalance</span>(account)</span>
+<span id="cb14-46"><a href="#cb14-46"></a>    _ &lt;- Accounts.<span class="fu">withdraw</span>(account, balance)</span>
+<span id="cb14-47"><a href="#cb14-47"></a>    statement &lt;- Accounts.<span class="fu">getStatement</span>(account)</span>
+<span id="cb14-48"><a href="#cb14-48"></a>  } <span class="kw">yield</span> statement</span>
+<span id="cb14-49"><a href="#cb14-49"></a>}</span>
+<span id="cb14-50"><a href="#cb14-50"></a></span>
+<span id="cb14-51"><a href="#cb14-51"></a><span class="fu">withdrawWithReaderT</span>(<span class="st">&quot;1234&quot;</span>).<span class="fu">run</span>(<span class="kw">new</span> Session)</span></code></pre></div>
+<p>Как вы видите не многое изменилось. Главное, что мы изменили это определение Action, он теперь использует ReaderT вместо Reader. Мы изменили трейт и его реализацию для того чтобы работать с ним. Теперь, когда вы посмотрите на функцию withdrawWithReaderT вы увидите что нам больше не нужно обрабатывать Option, но он обрабатывается нашим ReaderT(который на самом деле является Kleisli, но это тема для другой статьи). Круто, правда?</p>
+<p>Мы видим что это отлично работает для Option, что случится если мы вернёмся назад к оригинальному примеру и захотим использовать Option внутри Future и это всё внутри Reader? Ну этот момент выходит за рамки “Scalaz функций для повседневного использования”, но базовый подход такой же:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb15-1"><a href="#cb15-1"></a><span class="co">// введение в тип Action. Он представляет из себя действие которое наш сервис может выполнить.</span></span>
+<span id="cb15-2"><a href="#cb15-2"></a><span class="co">// Как вы видите Action требует Session.</span></span>
+<span id="cb15-3"><a href="#cb15-3"></a><span class="kw">type</span> OptionTF[A] = OptionT[Future, A]</span>
+<span id="cb15-4"><a href="#cb15-4"></a><span class="kw">type</span> Action[A] = ReaderT[OptionTF, Session, A]</span>
+<span id="cb15-5"><a href="#cb15-5"></a></span>
+<span id="cb15-6"><a href="#cb15-6"></a><span class="kw">trait</span> AccountService {</span>
+<span id="cb15-7"><a href="#cb15-7"></a>  <span class="co">// возвращает аккаунт или None, когда аккаунт не найден</span></span>
+<span id="cb15-8"><a href="#cb15-8"></a>  <span class="kw">def</span> <span class="fu">getAccount</span>(accountNumber: String) : Action[Account]</span>
+<span id="cb15-9"><a href="#cb15-9"></a>  <span class="co">// возвращает баланс если аккаунт открыт или None иначе</span></span>
+<span id="cb15-10"><a href="#cb15-10"></a>  <span class="kw">def</span> <span class="fu">getBalance</span>(account: Account) :Action[Amount]</span>
+<span id="cb15-11"><a href="#cb15-11"></a>  <span class="co">// снять сумму со счета, и вернуть новое значение</span></span>
+<span id="cb15-12"><a href="#cb15-12"></a>  <span class="kw">def</span> <span class="fu">withdraw</span>(account: Account, amount: Amount) : Action[Amount]</span>
+<span id="cb15-13"><a href="#cb15-13"></a>  <span class="co">// мы можем также получить обзор выписки со счета</span></span>
+<span id="cb15-14"><a href="#cb15-14"></a>  <span class="kw">def</span> <span class="fu">getStatement</span>(account: Account): Action[Statement]</span>
+<span id="cb15-15"><a href="#cb15-15"></a>}</span>
+<span id="cb15-16"><a href="#cb15-16"></a></span>
+<span id="cb15-17"><a href="#cb15-17"></a><span class="kw">object</span> Accounts <span class="kw">extends</span> AccountService {</span>
+<span id="cb15-18"><a href="#cb15-18"></a>  <span class="kw">override</span> <span class="kw">def</span> <span class="fu">getAccount</span>(accountNumber: String): Action[Account] = <span class="fu">ReaderT</span>((session: Session) =&gt; {</span>
+<span id="cb15-19"><a href="#cb15-19"></a>    <span class="co">// сделать что-нибудь с сессией здесь и вернуть результат</span></span>
+<span id="cb15-20"><a href="#cb15-20"></a>    session.<span class="fu">doSomething</span></span>
+<span id="cb15-21"><a href="#cb15-21"></a>    <span class="co">// предположим мы получаем Future[Option[Account]]</span></span>
+<span id="cb15-22"><a href="#cb15-22"></a>    <span class="kw">val</span> result = Future(Option(<span class="fu">Account</span>()))</span>
+<span id="cb15-23"><a href="#cb15-23"></a></span>
+<span id="cb15-24"><a href="#cb15-24"></a>    <span class="co">// и нам нужно поднять её в OptionTF и вернуть его</span></span>
+<span id="cb15-25"><a href="#cb15-25"></a>    <span class="kw">val</span> asOptionTF: OptionTF[Account] = <span class="fu">OptionT</span>(result)</span>
+<span id="cb15-26"><a href="#cb15-26"></a>    asOptionTF</span>
+<span id="cb15-27"><a href="#cb15-27"></a>  })</span>
+<span id="cb15-28"><a href="#cb15-28"></a></span>
+<span id="cb15-29"><a href="#cb15-29"></a>  <span class="kw">override</span> <span class="kw">def</span> <span class="fu">getBalance</span>(account: Account): Action[Amount] = <span class="fu">ReaderT</span>((session: Session) =&gt; {</span>
+<span id="cb15-30"><a href="#cb15-30"></a>    <span class="co">// сделать что-нибудь с сессией здесь и вернуть результат</span></span>
+<span id="cb15-31"><a href="#cb15-31"></a>    session.<span class="fu">doSomething</span></span>
+<span id="cb15-32"><a href="#cb15-32"></a>    <span class="co">// предположим мы получаем Future[Option[Amount]]</span></span>
+<span id="cb15-33"><a href="#cb15-33"></a>    <span class="kw">val</span> result = Future(<span class="fu">some</span>(<span class="fu">Amount</span>(<span class="dv">10</span>,<span class="st">&quot;Dollar&quot;</span>)))</span>
+<span id="cb15-34"><a href="#cb15-34"></a>    <span class="co">// преобразуем это к типу Action c явным типом чтобы сделать компилятор счастливым</span></span>
+<span id="cb15-35"><a href="#cb15-35"></a>    <span class="kw">val</span> asOptionTF: OptionTF[Amount] = <span class="fu">OptionT</span>(result)</span>
+<span id="cb15-36"><a href="#cb15-36"></a>    asOptionTF</span>
+<span id="cb15-37"><a href="#cb15-37"></a>  })</span>
+<span id="cb15-38"><a href="#cb15-38"></a></span>
+<span id="cb15-39"><a href="#cb15-39"></a>  <span class="kw">override</span> <span class="kw">def</span> <span class="fu">withdraw</span>(account: Account, amount: Amount): Action[Amount] = <span class="fu">ReaderT</span>((session: Session) =&gt; {</span>
+<span id="cb15-40"><a href="#cb15-40"></a>    <span class="co">// сделать что-нибудь с сессией здесь и вернуть результат</span></span>
+<span id="cb15-41"><a href="#cb15-41"></a>    session.<span class="fu">doSomething</span></span>
+<span id="cb15-42"><a href="#cb15-42"></a>    <span class="co">// предположим мы получаем Future[Amount]</span></span>
+<span id="cb15-43"><a href="#cb15-43"></a>    <span class="kw">val</span> result = Future(<span class="fu">Amount</span>(<span class="dv">5</span>, <span class="st">&quot;Dollar&quot;</span>))</span>
+<span id="cb15-44"><a href="#cb15-44"></a>    <span class="co">// приводим к корректному типу</span></span>
+<span id="cb15-45"><a href="#cb15-45"></a>    <span class="kw">val</span> asOptionTF: OptionTF[Amount] = <span class="fu">OptionT</span>(result.<span class="fu">map</span>(<span class="fu">some</span>(_)))</span>
+<span id="cb15-46"><a href="#cb15-46"></a>    asOptionTF</span>
+<span id="cb15-47"><a href="#cb15-47"></a>  })</span>
+<span id="cb15-48"><a href="#cb15-48"></a></span>
+<span id="cb15-49"><a href="#cb15-49"></a>  <span class="kw">override</span> <span class="kw">def</span> <span class="fu">getStatement</span>(account: Account): Action[Statement] = <span class="fu">ReaderT</span>((session: Session) =&gt; {</span>
+<span id="cb15-50"><a href="#cb15-50"></a>    <span class="co">// сделать что-нибудь с сессией здесь и вернуть результат</span></span>
+<span id="cb15-51"><a href="#cb15-51"></a>    session.<span class="fu">doSomething</span></span>
+<span id="cb15-52"><a href="#cb15-52"></a>    <span class="co">// предположим мы получаем Statement</span></span>
+<span id="cb15-53"><a href="#cb15-53"></a>    <span class="kw">val</span> result = Statement(account)</span>
+<span id="cb15-54"><a href="#cb15-54"></a>    <span class="co">// приведём к корректному типу</span></span>
+<span id="cb15-55"><a href="#cb15-55"></a>    result.<span class="fu">point</span>[OptionTF]</span>
+<span id="cb15-56"><a href="#cb15-56"></a>  })</span>
+<span id="cb15-57"><a href="#cb15-57"></a>}</span>
+<span id="cb15-58"><a href="#cb15-58"></a></span>
+<span id="cb15-59"><a href="#cb15-59"></a><span class="kw">def</span> <span class="fu">withdrawWithReaderT</span>(accountNumber: String) = {</span>
+<span id="cb15-60"><a href="#cb15-60"></a>  <span class="kw">for</span> {</span>
+<span id="cb15-61"><a href="#cb15-61"></a>    account &lt;- Accounts.<span class="fu">getAccount</span>(accountNumber)</span>
+<span id="cb15-62"><a href="#cb15-62"></a>    balance &lt;- Accounts.<span class="fu">getBalance</span>(account)</span>
+<span id="cb15-63"><a href="#cb15-63"></a>    _ &lt;- Accounts.<span class="fu">withdraw</span>(account, balance)</span>
+<span id="cb15-64"><a href="#cb15-64"></a>    statement &lt;- Accounts.<span class="fu">getStatement</span>(account)</span>
+<span id="cb15-65"><a href="#cb15-65"></a>  } <span class="kw">yield</span> statement</span>
+<span id="cb15-66"><a href="#cb15-66"></a>}</span>
+<span id="cb15-67"><a href="#cb15-67"></a></span>
+<span id="cb15-68"><a href="#cb15-68"></a><span class="co">// это результат завёрнутый в Option</span></span>
+<span id="cb15-69"><a href="#cb15-69"></a><span class="kw">val</span> finalResult = <span class="fu">withdrawWithReaderT</span>(<span class="st">&quot;1234&quot;</span>).<span class="fu">run</span>(<span class="kw">new</span> Session)</span>
+<span id="cb15-70"><a href="#cb15-70"></a><span class="co">// получаем Future[Option] и ждём результата</span></span>
+<span id="cb15-71"><a href="#cb15-71"></a><span class="fu">println</span>(Await.<span class="fu">result</span>(finalResult.<span class="fu">run</span>, <span class="dv">5</span> seconds))</span></code></pre></div>
+<p>Мы определили другой тип ReaderT, в который положили OptionT вместо просто Option. Этот OptionT будет обрабатывать преобразования Option/Future. Так как мы получили новый ReaderT, нам, конечно, нужно поднять результаты вызовов нашего сервиса к этой монаде, которые нуждаются в несколько насильственном приведении для того чтобы компилятор всё понял. Результат будет очень приятным. Текущий for-генератор остаётся точно таким же, но на этот раз может обрабатывать Option внутри Future внутри Reader!</p>
+<h3 id="заключение">Заключение</h3>
+<p>В этой статье мы рассмотрели две вещи из Scalaz, которые действительно пригодятся при работе с вложенными монадами или если вы хотите лучше управлять зависимостями между компонентами. Особенно крут тот факт, что довольно легко использовать монадные трансформеры вместе с монадой Reader. В результате, сделав пару небольших шагов мы можем полностью скрыть детали реализации(в данном случае) связанные с Future и Option, и получить очень красивые и чистые for-генераторы и другие монадические вкусности.</p>
+<p><a href="http://www.smartjava.org/content/scalaz-features-everyday-usage-part-2-monad-transformers-and-reader-monad">Оригинальная статья.</a></p>
+
+<div id="socialButtons">
+  <script type="text/javascript" src="//yastatic.net/es5-shims/0.0.2/es5-shims.min.js" charset="utf-8"></script>
+  <script type="text/javascript" src="//yastatic.net/share2/share.js" charset="utf-8"></script>
+  <div class="ya-share2" data-services="vkontakte,facebook,linkedin,gplus,twitter,blogger,reddit,evernote,lj,pocket" data-counter></div>
+</div>
+
+<div id="disqus_thread"></div>
+<script>
+
+/**
+*  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+*  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+/*
+var disqus_config = function () {
+this.page.url = PAGE_URL;  // Replace PAGE_URL with your page's canonical URL variable
+this.page.identifier = PAGE_IDENTIFIER; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+};
+*/
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = '//macs-club.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+        </div>
+
+        <div id="footer">
+            Сайт создан с помощью
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+    </body>
+</html>

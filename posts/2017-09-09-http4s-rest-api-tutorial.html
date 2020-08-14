@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>MaCS-Club Blog - Создание простого REST сервера на http4s и doobie</title>
+        <link rel="stylesheet" href="../css/default.css" />
+        <link rel="stylesheet" href="../css/syntax.css" />
+    </head>
+    <body>
+        <div id="header">
+            <div id="logo">
+                <a href="../">MaCS-Club</a>
+            </div>
+            <div id="navigation">
+                <a href="../">Главная</a>
+                <a href="../about.html">О нас</a>
+                <a href="../contact.html">Контакты</a>
+                <a href="../archive.html">Архив</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <h1>Создание простого REST сервера на http4s и doobie</h1>
+            <div class="info">
+    Дата: September  9, 2017
+    
+        Автор: BeiZero
+    
+</div>
+<div class="info">
+    
+    Tags: <a href="../tags/scala.html">scala</a>, <a href="../tags/scalaz.html">scalaz</a>, <a href="../tags/http4s.html">http4s</a>
+    
+</div>
+
+<p>В этой статье я расскажу о базовых принципах работы с библиотекой http4s и о том как с помощью неё создать простой REST сервер.</p>
+<h3 id="hello-world-на-http4s">“Hello, world!” на http4s</h3>
+<p>Для создания каркаса приложения мы можем воспользоваться уже готовым шаблоном используя <a href="http://www.foundweekends.org/giter8/">Giter8</a>. Выполним в консоле команду и заполним основные переменные <em>name</em>, <em>organization</em>, <em>package</em>, <em>scala_version</em>, <em>http4s_version</em>:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1"></a><span class="ex">sbt</span> -sbt-version 0.13.15 new http4s/http4s.g8</span>
+<span id="cb1-2"><a href="#cb1-2"></a></span>
+<span id="cb1-3"><a href="#cb1-3"></a><span class="ex">name</span> [http4s quickstart]: http4s-rest-api-example</span>
+<span id="cb1-4"><a href="#cb1-4"></a><span class="ex">organization</span> [com.example]: io.github.macs_club</span>
+<span id="cb1-5"><a href="#cb1-5"></a><span class="ex">package</span> [io.github.macs-club.http4srestapiexample]:</span>
+<span id="cb1-6"><a href="#cb1-6"></a><span class="ex">scala_version</span> [2.12.2]: 2.12.3</span>
+<span id="cb1-7"><a href="#cb1-7"></a><span class="ex">http4s_version</span> [0.15.11a]: 0.16.0a</span>
+<span id="cb1-8"><a href="#cb1-8"></a></span>
+<span id="cb1-9"><a href="#cb1-9"></a><span class="ex">Template</span> applied in ./http4s-rest-api-example</span></code></pre></div>
+<p>Это команда создаст в директории <code>http4s-rest-api-example</code> следующие файлы:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1"></a><span class="ex">build.sbt</span></span>
+<span id="cb2-2"><a href="#cb2-2"></a><span class="ex">project/build.properties</span></span>
+<span id="cb2-3"><a href="#cb2-3"></a><span class="ex">src/main/resources/logback.xml</span></span>
+<span id="cb2-4"><a href="#cb2-4"></a><span class="ex">src/main/scala/io/github/macs-club/http4srestapiexample/HelloWorld.scala</span></span>
+<span id="cb2-5"><a href="#cb2-5"></a><span class="ex">src/main/scala/io/github/macs-club/http4srestapiexample/Server.scala</span></span></code></pre></div>
+<p>Ну и давайте сразу запустим то, что у нас получилось командой <code>sbt run</code>. После разрешения зависимостей и компиляции мы увидим:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb3-1"><a href="#cb3-1"></a>[run-main<span class="dv">-0</span>] INFO  o.<span class="fu">h</span>.<span class="fu">b</span>.<span class="fu">c</span>.<span class="fu">n</span>.<span class="fu">NIO1SocketServerGroup</span> - Service bound to address /<span class="dv">0</span>:<span class="dv">0</span>:<span class="dv">0</span>:<span class="dv">0</span>:<span class="dv">0</span>:<span class="dv">0</span>:<span class="dv">0</span>:<span class="dv">0</span>:<span class="dv">8080</span></span>
+<span id="cb3-2"><a href="#cb3-2"></a>[run-main<span class="dv">-0</span>] INFO  o.<span class="fu">h</span>.<span class="fu">s</span>.<span class="fu">ServerApp</span> - Started server on /<span class="dv">0</span>:<span class="dv">0</span>:<span class="dv">0</span>:<span class="dv">0</span>:<span class="dv">0</span>:<span class="dv">0</span>:<span class="dv">0</span>:<span class="dv">0</span>:<span class="dv">8080</span></span></code></pre></div>
+<p>Это говорит о том, что blaze, собственный серверный бэкенд http4s, запустил наш сервис на порту 8080. Можем отправить ему “Hello, world!” запрос curl’ом:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1"></a><span class="ex">bash-3.2</span>$ curl localhost:8080/hello/world!</span>
+<span id="cb4-2"><a href="#cb4-2"></a>{<span class="st">&quot;message&quot;</span>:<span class="st">&quot;Hello, world!&quot;</span>}</span></code></pre></div>
+<p>Теперь рассмотрим содержимое файла <code>HelloWorld.scala</code> и разберём как он работает. Основная логика здесь скрывается в переменной <code>helloWorldService</code> типа <code>HttpService</code>. <code>HttpService</code> это просто алиас к <code>Kleisli[Task, Request, Response]</code>. Если вы не понимаете, что это значит, то ничего страшного. В данном случае <code>Kleisli</code> это обёртка над <code>Request =&gt; Task[Response]</code> и <code>Task</code> это асинхронная операция.</p>
+<p>Для работы с <code>HttpService</code> импортируются зависимости:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb5-1"><a href="#cb5-1"></a><span class="kw">import</span> org.<span class="fu">http4s</span>._, org.<span class="fu">http4s</span>.<span class="fu">dsl</span>._</span></code></pre></div>
+<p>Используя http4s-dsl можно создать <code>HttpService</code> используя сопоставление с образцом для запроса. Давайте посмотрим как устроен сервис, к которому мы обращались в предудещей части статьи, который обрабатывает запрос <code>GET /hello/:name</code>, где <code>:name</code> параметр:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb6-1"><a href="#cb6-1"></a><span class="kw">val</span> helloWorldService = HttpService {</span>
+<span id="cb6-2"><a href="#cb6-2"></a>  <span class="kw">case</span> GET -&gt; Root / <span class="st">&quot;hello&quot;</span> / name =&gt;</span>
+<span id="cb6-3"><a href="#cb6-3"></a>     <span class="fu">Ok</span>(Json.<span class="fu">obj</span>(<span class="st">&quot;message&quot;</span> -&gt; Json.<span class="fu">fromString</span>(s<span class="st">&quot;Hello, ${name}&quot;</span>)))</span>
+<span id="cb6-4"><a href="#cb6-4"></a>}</span></code></pre></div>
+<p>Теперь перейдём к <code>Server.scala</code> и разберём как запускается сервер. http4s поддерживает несколько серверных бэкнендов. В данном случае используется blaze. Внутри файла находится объект <code>BlazeExample</code> который реализует функцию <code>server</code> специального трейта <code>ServerApp</code> предназначенного для работы с сервером. Используя <code>BlazeBuilder</code> в функции <code>server</code> монтируется <code>helloWorldService</code> по корневому пути <code>/</code>, далее передаётся <code>ExecutorService</code> и команда <code>start</code> для запуска сервера. Сервисы можно монтировать в любом порядке, а запрос будет сопоставлять сначала с самым длинным из путей. <code>BlazeBuilder</code> неизменяемый с цепными методами, каждый из которых возвращает новый <code>BlazeBuilder</code>.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb7-1"><a href="#cb7-1"></a><span class="kw">override</span> <span class="kw">def</span> <span class="fu">server</span>(args: List[String]): Task[Server] =</span>
+<span id="cb7-2"><a href="#cb7-2"></a>  BlazeBuilder</span>
+<span id="cb7-3"><a href="#cb7-3"></a>    .<span class="fu">bindHttp</span>(port, ip)</span>
+<span id="cb7-4"><a href="#cb7-4"></a>    .<span class="fu">mountService</span>(HelloWorld.<span class="fu">helloWorldService</span>)</span>
+<span id="cb7-5"><a href="#cb7-5"></a>    .<span class="fu">withServiceExecutor</span>(pool)</span>
+<span id="cb7-6"><a href="#cb7-6"></a>    .<span class="fu">start</span></span></code></pre></div>
+<p><code>bindHttp</code> не является необходимым, по умолчанию сервер будет настроен на запуск по <code>localhost:8080</code>. <code>mountService</code> связывает путь с <code>HttpService</code>.</p>
+<h3 id="приложение-заметок">Приложение заметок</h3>
+<p>Давайте используя http4s создадим простенький REST API для работы со списком заметок. Создадим класс представляющий наши записки:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb8-1"><a href="#cb8-1"></a><span class="kw">package</span> io.<span class="fu">github</span>.<span class="fu">macs_club</span>.<span class="fu">http4srestapiexample</span>.<span class="fu">domain</span></span>
+<span id="cb8-2"><a href="#cb8-2"></a></span>
+<span id="cb8-3"><a href="#cb8-3"></a><span class="kw">case</span> <span class="kw">class</span> <span class="fu">Note</span>(title: String, body: String = <span class="st">&quot;&quot;</span>)</span></code></pre></div>
+<p>Для работы с базой данных будем использовать библиотеку <em>doobie</em> и встроенную базу данных <em>h2</em>. Для этого добавим в <code>build.sbt</code> необходимые зависимости:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb9-1"><a href="#cb9-1"></a><span class="kw">val</span> DoobieVersion = <span class="st">&quot;0.4.4&quot;</span></span>
+<span id="cb9-2"><a href="#cb9-2"></a></span>
+<span id="cb9-3"><a href="#cb9-3"></a>libraryDependencies ++= Seq(</span>
+<span id="cb9-4"><a href="#cb9-4"></a>  <span class="st">&quot;org.tpolecat&quot;</span>  %% <span class="st">&quot;doobie-core&quot;</span>        % DoobieVersion,</span>
+<span id="cb9-5"><a href="#cb9-5"></a>  <span class="st">&quot;org.tpolecat&quot;</span>  %% <span class="st">&quot;doobie-h2&quot;</span>          % DoobieVersion,</span>
+<span id="cb9-6"><a href="#cb9-6"></a>  <span class="st">&quot;org.tpolecat&quot;</span>  %% <span class="st">&quot;doobie-specs2&quot;</span>      % DoobieVersion</span>
+<span id="cb9-7"><a href="#cb9-7"></a>)</span></code></pre></div>
+<p>А так же добавим дополнительную зависимость библиотеки <em>circe</em> для автоматического вывода кодеков для <em>json</em>.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb10-1"><a href="#cb10-1"></a><span class="kw">val</span> CirceVersion = <span class="st">&quot;0.8.0&quot;</span></span>
+<span id="cb10-2"><a href="#cb10-2"></a></span>
+<span id="cb10-3"><a href="#cb10-3"></a>libraryDependencies ++= Seq(</span>
+<span id="cb10-4"><a href="#cb10-4"></a>  <span class="st">&quot;io.circe&quot;</span>      %% <span class="st">&quot;circe-generic&quot;</span>      % CirceVersion</span>
+<span id="cb10-5"><a href="#cb10-5"></a>)</span></code></pre></div>
+<p>Для доступа к базе данных будем использовать паттерн репозиторий. Создадим абстрактный класс <code>Repository</code>:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb11-1"><a href="#cb11-1"></a><span class="kw">package</span> io.<span class="fu">github</span>.<span class="fu">macs_club</span>.<span class="fu">http4srestapiexample</span>.<span class="fu">repository</span></span>
+<span id="cb11-2"><a href="#cb11-2"></a></span>
+<span id="cb11-3"><a href="#cb11-3"></a><span class="kw">import</span> scalaz.<span class="fu">Monad</span></span>
+<span id="cb11-4"><a href="#cb11-4"></a><span class="kw">import</span> scala.<span class="fu">language</span>.<span class="fu">higherKinds</span></span>
+<span id="cb11-5"><a href="#cb11-5"></a></span>
+<span id="cb11-6"><a href="#cb11-6"></a><span class="kw">abstract</span> <span class="kw">class</span> Repository[A, M[_]: Monad] {</span>
+<span id="cb11-7"><a href="#cb11-7"></a>  <span class="kw">def</span> +=(entity: A): M[A]</span>
+<span id="cb11-8"><a href="#cb11-8"></a>  <span class="kw">def</span> <span class="fu">update</span>(entity: A): M[A]</span>
+<span id="cb11-9"><a href="#cb11-9"></a>  <span class="kw">def</span> -=(entity: A): M[Unit]</span>
+<span id="cb11-10"><a href="#cb11-10"></a>  <span class="kw">def</span> list: M[List[A]]</span>
+<span id="cb11-11"><a href="#cb11-11"></a>}</span></code></pre></div>
+<p>Здесь используется обобщённый тип <code>A</code>, который будет соответствовать сущности с которой мы будем работать, и обобщённый тип <code>M</code> являющийся монадой для оборачивания результата работы с базой данных.</p>
+<p>Напишем реализацию для нашего типа <code>Note</code>. В качестве монады в которую будем упаковывать результат будем использовать <code>Task</code>:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb12-1"><a href="#cb12-1"></a><span class="kw">package</span> io.<span class="fu">github</span>.<span class="fu">macs_club</span>.<span class="fu">http4srestapiexample</span>.<span class="fu">repository</span>.<span class="fu">impl</span></span>
+<span id="cb12-2"><a href="#cb12-2"></a></span>
+<span id="cb12-3"><a href="#cb12-3"></a><span class="kw">import</span> scalaz._, Scalaz._</span>
+<span id="cb12-4"><a href="#cb12-4"></a><span class="kw">import</span> doobie.<span class="fu">imports</span>._</span>
+<span id="cb12-5"><a href="#cb12-5"></a><span class="kw">import</span> doobie.<span class="fu">h2</span>.<span class="fu">imports</span>._</span>
+<span id="cb12-6"><a href="#cb12-6"></a><span class="kw">import</span> scalaz.<span class="fu">concurrent</span>.<span class="fu">Task</span></span>
+<span id="cb12-7"><a href="#cb12-7"></a></span>
+<span id="cb12-8"><a href="#cb12-8"></a><span class="kw">import</span> io.<span class="fu">github</span>.<span class="fu">macs_club</span>.<span class="fu">http4srestapiexample</span>.<span class="fu">domain</span>.<span class="fu">Note</span></span>
+<span id="cb12-9"><a href="#cb12-9"></a><span class="kw">import</span> io.<span class="fu">github</span>.<span class="fu">macs_club</span>.<span class="fu">http4srestapiexample</span>.<span class="fu">repository</span>.<span class="fu">Repository</span></span>
+<span id="cb12-10"><a href="#cb12-10"></a></span>
+<span id="cb12-11"><a href="#cb12-11"></a><span class="kw">object</span> H2NoteRepository {</span>
+<span id="cb12-12"><a href="#cb12-12"></a>  <span class="kw">def</span> <span class="fu">apply</span>() = Task {</span>
+<span id="cb12-13"><a href="#cb12-13"></a>      <span class="kw">val</span> h2nr = <span class="kw">new</span> <span class="fu">H2NoteRepository</span>()</span>
+<span id="cb12-14"><a href="#cb12-14"></a>      h2nr.<span class="fu">init</span>.<span class="fu">unsafePerformSync</span></span>
+<span id="cb12-15"><a href="#cb12-15"></a>      h2nr</span>
+<span id="cb12-16"><a href="#cb12-16"></a>  }</span>
+<span id="cb12-17"><a href="#cb12-17"></a>}</span>
+<span id="cb12-18"><a href="#cb12-18"></a></span>
+<span id="cb12-19"><a href="#cb12-19"></a><span class="kw">class</span> H2NoteRepository <span class="kw">extends</span> Repository[Note, Task]{</span>
+<span id="cb12-20"><a href="#cb12-20"></a></span>
+<span id="cb12-21"><a href="#cb12-21"></a>  <span class="kw">val</span> xa = H2Transactor[Task](<span class="st">&quot;jdbc:h2:mem:http4srestapiexample;DB_CLOSE_DELAY=-1&quot;</span>, <span class="st">&quot;h2username&quot;</span>, <span class="st">&quot;h2password&quot;</span>)</span>
+<span id="cb12-22"><a href="#cb12-22"></a></span>
+<span id="cb12-23"><a href="#cb12-23"></a>  <span class="kw">private</span> <span class="kw">def</span> init = {</span>
+<span id="cb12-24"><a href="#cb12-24"></a>      <span class="kw">val</span> query = sql<span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb12-25"><a href="#cb12-25"></a>        CREATE TABLE IF NOT EXISTS <span class="fu">note</span> (</span>
+<span id="cb12-26"><a href="#cb12-26"></a>          title <span class="fu">VARCHAR</span>(<span class="dv">20</span>) NOT NULL UNIQUE,</span>
+<span id="cb12-27"><a href="#cb12-27"></a>             body  <span class="fu">VARCHAR</span>(<span class="dv">20</span>)</span>
+<span id="cb12-28"><a href="#cb12-28"></a>        )</span>
+<span id="cb12-29"><a href="#cb12-29"></a>      <span class="st">&quot;&quot;&quot;.update.run</span></span>
+<span id="cb12-30"><a href="#cb12-30"></a>      xa &gt;&gt;= (query.<span class="fu">transact</span>(_))</span>
+<span id="cb12-31"><a href="#cb12-31"></a>  }</span>
+<span id="cb12-32"><a href="#cb12-32"></a></span>
+<span id="cb12-33"><a href="#cb12-33"></a>  <span class="kw">override</span> <span class="kw">def</span> +=(note: Note) = {</span>
+<span id="cb12-34"><a href="#cb12-34"></a>      <span class="kw">val</span> insertQ = sql<span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb12-35"><a href="#cb12-35"></a>            INSERT INTO <span class="fu">note</span> (title, body)</span>
+<span id="cb12-36"><a href="#cb12-36"></a>            <span class="fu">VALUES</span> (${note.<span class="fu">title</span>},${note.<span class="fu">body</span>})</span>
+<span id="cb12-37"><a href="#cb12-37"></a>        <span class="st">&quot;&quot;&quot;.update.run</span></span>
+<span id="cb12-38"><a href="#cb12-38"></a>    <span class="kw">val</span> selectQ = sql<span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb12-39"><a href="#cb12-39"></a>            SELECT title, body</span>
+<span id="cb12-40"><a href="#cb12-40"></a>            FROM note</span>
+<span id="cb12-41"><a href="#cb12-41"></a>        WHERE title = ${note.<span class="fu">title</span>}</span>
+<span id="cb12-42"><a href="#cb12-42"></a>        <span class="st">&quot;&quot;&quot;.query[Note].unique</span></span>
+<span id="cb12-43"><a href="#cb12-43"></a>      <span class="kw">val</span> query = insertQ *&gt; selectQ</span>
+<span id="cb12-44"><a href="#cb12-44"></a>      xa &gt;&gt;= (query.<span class="fu">transact</span>(_))</span>
+<span id="cb12-45"><a href="#cb12-45"></a>  }</span>
+<span id="cb12-46"><a href="#cb12-46"></a></span>
+<span id="cb12-47"><a href="#cb12-47"></a>  <span class="kw">override</span> <span class="kw">def</span> <span class="fu">update</span>(note: Note) = {</span>
+<span id="cb12-48"><a href="#cb12-48"></a>      <span class="kw">val</span> updateQ = sql<span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb12-49"><a href="#cb12-49"></a>            UPDATE note</span>
+<span id="cb12-50"><a href="#cb12-50"></a>            SET body = ${note.<span class="fu">body</span>}</span>
+<span id="cb12-51"><a href="#cb12-51"></a>            WHERE title = ${note.<span class="fu">title</span>}</span>
+<span id="cb12-52"><a href="#cb12-52"></a>        <span class="st">&quot;&quot;&quot;.update.run</span></span>
+<span id="cb12-53"><a href="#cb12-53"></a>      <span class="kw">val</span> selectQ = sql<span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb12-54"><a href="#cb12-54"></a>            SELECT title, body</span>
+<span id="cb12-55"><a href="#cb12-55"></a>            FROM note</span>
+<span id="cb12-56"><a href="#cb12-56"></a>        WHERE title = ${note.<span class="fu">title</span>}</span>
+<span id="cb12-57"><a href="#cb12-57"></a>        <span class="st">&quot;&quot;&quot;.query[Note].unique</span></span>
+<span id="cb12-58"><a href="#cb12-58"></a>      <span class="kw">val</span> query = updateQ *&gt; selectQ</span>
+<span id="cb12-59"><a href="#cb12-59"></a>      xa &gt;&gt;= (query.<span class="fu">transact</span>(_))</span>
+<span id="cb12-60"><a href="#cb12-60"></a>  }</span>
+<span id="cb12-61"><a href="#cb12-61"></a></span>
+<span id="cb12-62"><a href="#cb12-62"></a>  <span class="kw">override</span> <span class="kw">def</span> -=(note: Note) = {</span>
+<span id="cb12-63"><a href="#cb12-63"></a>      <span class="kw">val</span> query = sql<span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb12-64"><a href="#cb12-64"></a>            DELETE FROM note</span>
+<span id="cb12-65"><a href="#cb12-65"></a>            WHERE title = ${note.<span class="fu">title</span>}</span>
+<span id="cb12-66"><a href="#cb12-66"></a>        <span class="st">&quot;&quot;&quot;.update.run *&gt; FC.unit</span></span>
+<span id="cb12-67"><a href="#cb12-67"></a>      xa &gt;&gt;= (query.<span class="fu">transact</span>(_))</span>
+<span id="cb12-68"><a href="#cb12-68"></a>  }</span>
+<span id="cb12-69"><a href="#cb12-69"></a></span>
+<span id="cb12-70"><a href="#cb12-70"></a>  <span class="kw">override</span> <span class="kw">def</span> list = {</span>
+<span id="cb12-71"><a href="#cb12-71"></a>      <span class="kw">val</span> query = sql<span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb12-72"><a href="#cb12-72"></a>            SELECT title, body</span>
+<span id="cb12-73"><a href="#cb12-73"></a>            FROM note</span>
+<span id="cb12-74"><a href="#cb12-74"></a>        <span class="st">&quot;&quot;&quot;.query[Note].list</span></span>
+<span id="cb12-75"><a href="#cb12-75"></a>      xa &gt;&gt;= (query.<span class="fu">transact</span>(_))</span>
+<span id="cb12-76"><a href="#cb12-76"></a>  }</span>
+<span id="cb12-77"><a href="#cb12-77"></a>}</span></code></pre></div>
+<p>Теперь рассмотрим подробнее что же здесь происходит.</p>
+<p><code>Transactor</code> это обёртка над пуллом соединений. Т.к. у транзактора есть внутренние состояние, то его создание это сайд эффект и его необходимо обернуть, в данном случае используется <code>Task</code>. Т.к. при создании репозитория мы хотим ещё и создать таблицу в которой у нас будут храниться наши сущности, то похожую вещь провернём и с созданием репозитория, т.е. в функции <em>apply</em> объекта компаньона создадим репозиторий, потом создадим таблицу, вернём наш репозиторий и завернём всё это в <code>Task</code>.</p>
+<p>Каждому запросу для запуска необходимо передать транзактор. Т.к. транзактор обёрнут в монаду <code>Task</code> то доступ к нему происходит через оператор <code>&gt;&gt;=</code>(алиас для функции <code>flatMap</code>), в который мы передаём вызов функции <code>transact</code> нашего запроса, которая так же возвращает <code>Task</code>.</p>
+<p>Запросы <code>+=, update, -=</code> используют комбинирование нескольких запросов с помощью <code>*&gt;</code> и они выполняются их в рамках одной транзакции.</p>
+<p>Теперь необходимо создать сервис с помощью которого мы будем с работать с заметками:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode scala"><code class="sourceCode scala"><span id="cb13-1"><a href="#cb13-1"></a><span class="kw">package</span> io.<span class="fu">github</span>.<span class="fu">macs_club</span>.<span class="fu">http4srestapiexample</span>.<span class="fu">service</span></span>
+<span id="cb13-2"><a href="#cb13-2"></a></span>
+<span id="cb13-3"><a href="#cb13-3"></a><span class="kw">import</span> scalaz._, Scalaz._</span>
+<span id="cb13-4"><a href="#cb13-4"></a><span class="kw">import</span> io.<span class="fu">circe</span>._</span>
+<span id="cb13-5"><a href="#cb13-5"></a><span class="kw">import</span> org.<span class="fu">http4s</span>._</span>
+<span id="cb13-6"><a href="#cb13-6"></a><span class="kw">import</span> org.<span class="fu">http4s</span>.<span class="fu">circe</span>._</span>
+<span id="cb13-7"><a href="#cb13-7"></a><span class="kw">import</span> io.<span class="fu">circe</span>.<span class="fu">generic</span>.<span class="fu">auto</span>._</span>
+<span id="cb13-8"><a href="#cb13-8"></a><span class="kw">import</span> org.<span class="fu">http4s</span>.<span class="fu">dsl</span>._</span>
+<span id="cb13-9"><a href="#cb13-9"></a><span class="kw">import</span> scalaz.<span class="fu">concurrent</span>.<span class="fu">Task</span></span>
+<span id="cb13-10"><a href="#cb13-10"></a></span>
+<span id="cb13-11"><a href="#cb13-11"></a><span class="kw">import</span> io.<span class="fu">github</span>.<span class="fu">macs_club</span>.<span class="fu">http4srestapiexample</span>.<span class="fu">domain</span>.<span class="fu">Note</span></span>
+<span id="cb13-12"><a href="#cb13-12"></a><span class="kw">import</span> io.<span class="fu">github</span>.<span class="fu">macs_club</span>.<span class="fu">http4srestapiexample</span>.<span class="fu">repository</span>.<span class="fu">Repository</span></span>
+<span id="cb13-13"><a href="#cb13-13"></a><span class="kw">import</span> io.<span class="fu">github</span>.<span class="fu">macs_club</span>.<span class="fu">http4srestapiexample</span>.<span class="fu">repository</span>.<span class="fu">impl</span>.<span class="fu">H2NoteRepository</span></span>
+<span id="cb13-14"><a href="#cb13-14"></a></span>
+<span id="cb13-15"><a href="#cb13-15"></a><span class="kw">object</span> NoteService {</span>
+<span id="cb13-16"><a href="#cb13-16"></a>  <span class="kw">implicit</span> <span class="kw">def</span> circeJsonDecoder[A](<span class="kw">implicit</span> decoder: Decoder[A]): EntityDecoder[A] = org.<span class="fu">http4s</span>.<span class="fu">circe</span>.<span class="fu">jsonOf</span>[A]</span>
+<span id="cb13-17"><a href="#cb13-17"></a>  <span class="kw">implicit</span> <span class="kw">def</span> circeJsonEncoder[A](<span class="kw">implicit</span> encoder: Encoder[A]): EntityEncoder[A] = org.<span class="fu">http4s</span>.<span class="fu">circe</span>.<span class="fu">jsonEncoderOf</span>[A]</span>
+<span id="cb13-18"><a href="#cb13-18"></a></span>
+<span id="cb13-19"><a href="#cb13-19"></a>  <span class="kw">val</span> repository: Task[Repository[Note, Task]] = <span class="fu">H2NoteRepository</span>()</span>
+<span id="cb13-20"><a href="#cb13-20"></a></span>
+<span id="cb13-21"><a href="#cb13-21"></a>  <span class="kw">val</span> service = HttpService {</span>
+<span id="cb13-22"><a href="#cb13-22"></a>      <span class="kw">case</span> GET -&gt; Root =&gt; repository &gt;&gt;= (_.<span class="fu">list</span>) &gt;&gt;= (<span class="fu">Ok</span>(_))</span>
+<span id="cb13-23"><a href="#cb13-23"></a>      <span class="kw">case</span> req @ POST -&gt; Root =&gt; req.<span class="fu">decode</span>[Note]{ data =&gt;</span>
+<span id="cb13-24"><a href="#cb13-24"></a>         <span class="fu">Ok</span>(repository &gt;&gt;= (_ += data))</span>
+<span id="cb13-25"><a href="#cb13-25"></a>      }</span>
+<span id="cb13-26"><a href="#cb13-26"></a>      <span class="kw">case</span> req @ PUT -&gt; Root =&gt; req.<span class="fu">decode</span>[Note]{ data =&gt;</span>
+<span id="cb13-27"><a href="#cb13-27"></a>         <span class="fu">Ok</span>(repository &gt;&gt;= (_ update data))</span>
+<span id="cb13-28"><a href="#cb13-28"></a>      }</span>
+<span id="cb13-29"><a href="#cb13-29"></a>      <span class="kw">case</span> DELETE -&gt; Root / name =&gt; <span class="fu">Ok</span>(repository &gt;&gt;= (_ -= <span class="fu">Note</span>(name)))</span>
+<span id="cb13-30"><a href="#cb13-30"></a>  }</span>
+<span id="cb13-31"><a href="#cb13-31"></a>}</span></code></pre></div>
+<p>Сервис создаётся на основе репозитория и обрабатывает сообщения на основе сопоставления с образцом. Здесь так же объявлены специальные неявные преобразования предоставляющие <code>EntityDecoder</code> и <code>EntityEncoder</code> для работы с json.</p>
+<p>Теперь остаётся только примонтировать новый сервис в <code>BlazeBuilder</code>. Теперь можно запустить сервер и создавать/получать/удалять/изменять записки.</p>
+<pre class="shell"><code>$ curl -X POST localhost:8080 -d '{&quot;title&quot;:&quot;Test Title&quot;,&quot;body&quot;:&quot;Test Body&quot;}'
+{&quot;title&quot;:&quot;Test Title&quot;,&quot;body&quot;:&quot;Test Body&quot;}
+$ curl  localhost:8080
+[{&quot;title&quot;:&quot;Test Title&quot;,&quot;body&quot;:&quot;Test Body&quot;}]
+$ curl -X DELETE localhost:8080/Test%20Title
+$ curl  localhost:8080
+[]</code></pre>
+<p><a href="https://github.com/MaCS-Club/http4s-rest-api-example">Исходники проекта</a></p>
+
+<div id="socialButtons">
+  <script type="text/javascript" src="//yastatic.net/es5-shims/0.0.2/es5-shims.min.js" charset="utf-8"></script>
+  <script type="text/javascript" src="//yastatic.net/share2/share.js" charset="utf-8"></script>
+  <div class="ya-share2" data-services="vkontakte,facebook,linkedin,gplus,twitter,blogger,reddit,evernote,lj,pocket" data-counter></div>
+</div>
+
+<div id="disqus_thread"></div>
+<script>
+
+/**
+*  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+*  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+/*
+var disqus_config = function () {
+this.page.url = PAGE_URL;  // Replace PAGE_URL with your page's canonical URL variable
+this.page.identifier = PAGE_IDENTIFIER; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+};
+*/
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = '//macs-club.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+        </div>
+
+        <div id="footer">
+            Сайт создан с помощью
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+    </body>
+</html>

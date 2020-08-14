@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>MaCS-Club Blog - Введение в Agda</title>
+        <link rel="stylesheet" href="../css/default.css" />
+        <link rel="stylesheet" href="../css/syntax.css" />
+    </head>
+    <body>
+        <div id="header">
+            <div id="logo">
+                <a href="../">MaCS-Club</a>
+            </div>
+            <div id="navigation">
+                <a href="../">Главная</a>
+                <a href="../about.html">О нас</a>
+                <a href="../contact.html">Контакты</a>
+                <a href="../archive.html">Архив</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <h1>Введение в Agda</h1>
+            <div class="info">
+    Дата: April 27, 2020
+    
+        Автор: BeiZero
+    
+</div>
+<div class="info">
+    
+    Tags: <a href="../tags/agda.html">agda</a>
+    
+</div>
+
+<p>Это текстовая версия <a href="https://youtu.be/tRnsIWKqL34">видео-лекции</a> с нашего канала.</p>
+<h2 id="что-такое-agda">Что такое Agda?</h2>
+<p>Agda — чистый функциональный язык программирования с зависимыми типами. Теоретической основой для Agda служит интуиционистская теория типов Мартин-Лёфа, которая расширена набором конструкций, полезных для практического программирования.</p>
+<h2 id="почему-agda">Почему Agda?</h2>
+<h3 id="функциональный-язык-с-зависимыми-типами">Функциональный язык с зависимыми типами</h3>
+<p>Agda является одним из самых продвинутых функциональных языков программирования и не смотря на то, что на данный момент языки подобные Agda используются скорее в исследовательских и образовательных целях я думаю будет полезно разобраться как работать с зависимыми типами т.к. я убеждён, что в будущем они станут такой же обыденностью как и функциональный подход к работе с коллекциями. Уже сейчас всё больше практически ориентированных языков программирования позволяют использовать зависимые типы, есть Idris, в каком-то виде они реализованы в Haskell, а с помощью специальных библиотек их можно использовать и в Scala.</p>
+<h3 id="является-системой-автоматического-доказательства">Является системой автоматического доказательства</h3>
+<p>На Agda можно формализовать очень много конструкций из математики и доказать множество теорем.</p>
+<h3 id="вместе-с-coq-является-языком-формализации-hott">Вместе с Coq является языком формализации HoTT</h3>
+<p>Гомотопическая теория типов достаточно перспективная, интересная и активно развивающаяся область математики в которой как мне кажется есть чем заняться обычным программистам. С помощью гомотопической теории типов строятся унивалентные основания математики – универсальный формальный язык являющийся конструктивными основаниями для современных разделов математики и обеспечивающий возможность автоматической проверки правильности доказательств на компьютере.</p>
+<h2 id="установка">Установка</h2>
+<p>Если у вас уже стоит Stack, то установить Agda можно командой</p>
+<pre class="shell"><code>stack install Agda</code></pre>
+<p>Иначе установите сначала Stack</p>
+<h2 id="настройка">Настройка</h2>
+<p>Для написания программ рекомендуется использовать либо Emacs, либо Atom. Я остановлюсь на последнем. Для удобной работы нужно поставить плагины <em>agda-mode</em> и <em>language-agda</em>, сделать это можно командами</p>
+<pre class="shell"><code>apm install language-agda
+apm install agda-mode</code></pre>
+<h2 id="hello-world">Hello, World!</h2>
+<p>Обычно когда рассказывают про какой-то язык программирования в качестве первого примера приводят программу выводящую в консоль <em>Hello, World!</em>, но Agda не совсем обычный язык программирования и IO там используют редко, поэтому поговорим мы о нём как-нибудь в другой раз. Вместо этого мы определим тип булеан и реализуем несколько операций над ним.</p>
+<p>Agda не загружает автоматически стандартную библиотеку. Поэтому мы можем начать с нуля и не бояться коллизий.</p>
+<p>Для начала создадим файл <em>Bool.agda</em> и создадим в нём модуль</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb3-1"><a href="#cb3-1"></a><span class="kw">module</span> Bool <span class="kw">where</span></span></code></pre></div>
+<p>(в отличии от Haskell указание модуля обязательно)</p>
+<p>Определение булевого типа на Agda будет выглядеть так:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb4-1"><a href="#cb4-1"></a><span class="kw">data</span> 𝔹 <span class="ot">:</span> <span class="dt">Set</span> <span class="kw">where</span> <span class="co">--𝔹 пишется с помощью \bB</span></span>
+<span id="cb4-2"><a href="#cb4-2"></a>    true <span class="ot">:</span> Bool</span>
+<span id="cb4-3"><a href="#cb4-3"></a>    false <span class="ot">:</span> Bool</span></code></pre></div>
+<p>В определении типа булеан у нас указано <code>𝔹 : Set</code>, что в точности означает <em>𝔹 имеет тип Set</em>.</p>
+<p>Т.к. Agda является языком с зависимыми типами она не различает термы и типы, поэтому у каждого типа есть тип. Большинство базовых типов имеют тип Set т.е. множество.</p>
+<p>Для того, чтобы избежать парадокса Рассела, который возникает если разрешить множествам содержать в себе множества, тип Set имеет тип не Set, а Set₁, который в свою очередь имеет тип Set₂ и т.д. Бесконечная иерархия типов позволяет избежать ситуации в которой в типе содержится он сам.</p>
+<p>Теперь можем определить условный оператор <code>if</code>. Agda поддерживает так называемую миксфиксную запись, например, можно определить <code>if_then_else_</code>, который далее можно вызвать и как <code>if a then b else c</code> и <code>if_then_else_ a b c</code>.</p>
+<p>Сигнатура будет следующая:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb5-1"><a href="#cb5-1"></a><span class="co">--→ пишется через \to</span></span>
+<span id="cb5-2"><a href="#cb5-2"></a>if<span class="ot">_</span>then<span class="ot">_</span>else<span class="ot">_</span> <span class="ot">:</span> <span class="ot">{</span>A <span class="ot">:</span> <span class="dt">Set</span><span class="ot">}</span> <span class="ot">→</span> 𝔹 <span class="ot">→</span> A <span class="ot">→</span> A <span class="ot">→</span> A</span></code></pre></div>
+<p>в фигурных скобках указываются так называемые неявные параметры, т.е. параметры, которые при вызове не нужно будет явно указывать, компилятор Agda сам поймёт, что нужно подставить.</p>
+<p>вместе с реализацией:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb6-1"><a href="#cb6-1"></a>if<span class="ot">_</span>then<span class="ot">_</span>else<span class="ot">_</span> <span class="ot">:</span> <span class="ot">{</span>A <span class="ot">:</span> <span class="dt">Set</span><span class="ot">}</span> <span class="ot">→</span> 𝔹 <span class="ot">→</span> A <span class="ot">→</span> A <span class="ot">→</span> A</span>
+<span id="cb6-2"><a href="#cb6-2"></a>if true then a else b <span class="ot">=</span> a</span>
+<span id="cb6-3"><a href="#cb6-3"></a>if false then a else b <span class="ot">=</span> b</span></code></pre></div>
+<p>Так же можем определить операцию коньюнкции</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb7-1"><a href="#cb7-1"></a><span class="kw">infixr</span> <span class="dv">30</span> <span class="ot">_</span>∧<span class="ot">_</span> <span class="co">--\and</span></span>
+<span id="cb7-2"><a href="#cb7-2"></a></span>
+<span id="cb7-3"><a href="#cb7-3"></a><span class="ot">_</span>∧<span class="ot">_</span> <span class="ot">:</span> 𝔹 <span class="ot">→</span> 𝔹 <span class="ot">→</span> 𝔹</span>
+<span id="cb7-4"><a href="#cb7-4"></a>true ∧ b <span class="ot">=</span> b</span>
+<span id="cb7-5"><a href="#cb7-5"></a><span class="ot">_</span> ∧ <span class="ot">_</span> <span class="ot">=</span> false</span></code></pre></div>
+<p>и дизьюнкции</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb8-1"><a href="#cb8-1"></a><span class="kw">infixr</span> <span class="dv">20</span> <span class="ot">_</span>∨<span class="ot">_</span> <span class="co">--\or</span></span>
+<span id="cb8-2"><a href="#cb8-2"></a></span>
+<span id="cb8-3"><a href="#cb8-3"></a><span class="ot">_</span>∨<span class="ot">_</span> <span class="ot">:</span> 𝔹 <span class="ot">→</span> 𝔹 <span class="ot">→</span> 𝔹</span>
+<span id="cb8-4"><a href="#cb8-4"></a>false ∨ b <span class="ot">=</span> b</span>
+<span id="cb8-5"><a href="#cb8-5"></a><span class="ot">_</span> ∨ <span class="ot">_</span> <span class="ot">=</span> true</span></code></pre></div>
+<p>и отрицания</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb9-1"><a href="#cb9-1"></a><span class="kw">infix</span> <span class="dv">40</span> ¬<span class="ot">_</span> <span class="co">--\neg</span></span>
+<span id="cb9-2"><a href="#cb9-2"></a></span>
+<span id="cb9-3"><a href="#cb9-3"></a>¬<span class="ot">_</span> <span class="ot">:</span> 𝔹 <span class="ot">→</span> 𝔹</span>
+<span id="cb9-4"><a href="#cb9-4"></a>¬ true <span class="ot">=</span> false</span>
+<span id="cb9-5"><a href="#cb9-5"></a>¬ false <span class="ot">=</span> true</span></code></pre></div>
+<p>Думаю теперь пришло время что-нибудь наконец доказать, например, законы Де Моргана. Для этого нам нужно будет ввести тип равенства:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb10-1"><a href="#cb10-1"></a><span class="kw">infix</span> <span class="dv">4</span> <span class="ot">_</span>≡<span class="ot">_</span></span>
+<span id="cb10-2"><a href="#cb10-2"></a></span>
+<span id="cb10-3"><a href="#cb10-3"></a><span class="kw">data</span> <span class="ot">_</span>≡<span class="ot">_</span> <span class="ot">{</span>A <span class="ot">:</span> <span class="dt">Set</span><span class="ot">}</span> <span class="ot">:</span> A <span class="ot">→</span> A <span class="ot">→</span> <span class="dt">Set</span> <span class="kw">where</span></span>
+<span id="cb10-4"><a href="#cb10-4"></a>  refl <span class="ot">:</span> <span class="ot">{</span> a <span class="ot">:</span> A <span class="ot">}</span> <span class="ot">→</span> a ≡ a</span></code></pre></div>
+<p>Фактически это означает, что для любого типа <code>A</code> и любого терма <code>a</code> этого типа справедливо, что <code>a ≡ a</code> и таким образом <code>refl</code> является доказательством по определению.</p>
+<p>Теперь можно сформулировать законы Де Морогана</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb11-1"><a href="#cb11-1"></a>DeMorgan-law₁ <span class="ot">:</span> <span class="ot">(</span>a b <span class="ot">:</span> 𝔹<span class="ot">)</span> <span class="ot">→</span> ¬ <span class="ot">(</span>a ∧ b<span class="ot">)</span> ≡ ¬ a ∨ ¬ b</span>
+<span id="cb11-2"><a href="#cb11-2"></a></span>
+<span id="cb11-3"><a href="#cb11-3"></a>DeMorgan-law₂ <span class="ot">:</span> <span class="ot">(</span>a b <span class="ot">:</span> 𝔹<span class="ot">)</span> <span class="ot">→</span> ¬ <span class="ot">(</span>a ∨ b<span class="ot">)</span> ≡ ¬ a ∧ ¬ b</span></code></pre></div>
+<p>На самом деле булеан достаточно простой тип и доказать множество вещей можно просто разбором случаев:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb12-1"><a href="#cb12-1"></a>DeMorgan-law₁ <span class="ot">:</span> <span class="ot">(</span>a b <span class="ot">:</span> 𝔹<span class="ot">)</span> <span class="ot">→</span> ¬ <span class="ot">(</span>a ∧ b<span class="ot">)</span> ≡ ¬ a ∨ ¬ b</span>
+<span id="cb12-2"><a href="#cb12-2"></a>DeMorgan-law₁ false b <span class="ot">=</span> refl</span>
+<span id="cb12-3"><a href="#cb12-3"></a>DeMorgan-law₁ true b <span class="ot">=</span> refl</span>
+<span id="cb12-4"><a href="#cb12-4"></a></span>
+<span id="cb12-5"><a href="#cb12-5"></a>DeMorgan-law₂ <span class="ot">:</span> <span class="ot">(</span>a b <span class="ot">:</span> 𝔹<span class="ot">)</span> <span class="ot">→</span> ¬ <span class="ot">(</span>a ∨ b<span class="ot">)</span> ≡ ¬ a ∧ ¬ b</span>
+<span id="cb12-6"><a href="#cb12-6"></a>DeMorgan-law₂ true b <span class="ot">=</span> refl</span>
+<span id="cb12-7"><a href="#cb12-7"></a>DeMorgan-law₂ false b <span class="ot">=</span> refl</span></code></pre></div>
+<p>В данной ситуации, перебора значений первого аргумента будет достаточно. Если зафиксировать в качестве первого аргумент значение true, то левая и правая часть равенства будут равны просто по определению, такая же ситуация будет и если зафиксировать false</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb13-1"><a href="#cb13-1"></a>¬ <span class="ot">(</span>true ∧ b<span class="ot">)</span> ≡ ¬ true ∨ ¬ b =&gt; ¬ <span class="ot">(</span>b<span class="ot">)</span> ≡ false ∨ ¬ b =&gt; ¬ b ≡ ¬ b</span></code></pre></div>
+<p>но важно заметить, что доказательства достаточно сильно зависят от определений, например, если мы определим коньюнкцию иначе:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb14-1"><a href="#cb14-1"></a><span class="ot">_</span>∧<span class="ot">_</span> <span class="ot">:</span> 𝔹 <span class="ot">→</span> 𝔹 <span class="ot">→</span> 𝔹</span>
+<span id="cb14-2"><a href="#cb14-2"></a>true ∧ true <span class="ot">=</span> true</span>
+<span id="cb14-3"><a href="#cb14-3"></a><span class="ot">_</span> ∧ <span class="ot">_</span> <span class="ot">=</span> false</span></code></pre></div>
+<p>то наши доказательства работать уже не будет, т.к. компилятор не найдёт подходящих паттернов в нашем определении.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode agda"><code class="sourceCode agda"><span id="cb15-1"><a href="#cb15-1"></a>true ∧ b != b of type 𝔹</span></code></pre></div>
+<p>тут так же важно понимать, что “не равно” в данном случае не означает, что левая и правая части выражения различаются, это означает лишь то, что у компилятора нет оснований считать, что левая и правая часть одинаковы, мы можем предоставить компилятору доказательство, что это одно и то же, и тогда он с радостью скомпилирует наш код.</p>
+
+<div id="socialButtons">
+  <script type="text/javascript" src="//yastatic.net/es5-shims/0.0.2/es5-shims.min.js" charset="utf-8"></script>
+  <script type="text/javascript" src="//yastatic.net/share2/share.js" charset="utf-8"></script>
+  <div class="ya-share2" data-services="vkontakte,facebook,linkedin,gplus,twitter,blogger,reddit,evernote,lj,pocket" data-counter></div>
+</div>
+
+<div id="disqus_thread"></div>
+<script>
+
+/**
+*  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+*  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+/*
+var disqus_config = function () {
+this.page.url = PAGE_URL;  // Replace PAGE_URL with your page's canonical URL variable
+this.page.identifier = PAGE_IDENTIFIER; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+};
+*/
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = '//macs-club.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+        </div>
+
+        <div id="footer">
+            Сайт создан с помощью
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+    </body>
+</html>
